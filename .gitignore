@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.log
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build / Dist
+build/
+dist/
+*.spec
+
+# Temp files
+temp/
+tmp/
+*.tmp
+*.bak
+
+# Word automation temp files
+~$*.docx
+*.docx.lock
+
+# Qt / PySide
+*.qrc
+*.pyproject
+*.qmlc
+*.jsc
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+
+# User data
+contracts.db
+archive/
+output/
+exports/
+saved/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+
+# JSON temp
+*.json
+temp_json/
