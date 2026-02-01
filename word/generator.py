@@ -53,6 +53,7 @@ class ContractGenerator:
             if shape.TextFrame.HasText:
                 rng = shape.TextFrame.TextRange
                 text = rng.Text
+                
 
                 # --- جایگذاری عکس کارشناسی ---
                 if "checkpoint_img" in text:
@@ -73,6 +74,7 @@ class ContractGenerator:
                         text = text.replace(key, str(value))
 
                 rng.Text = text
+                
 
         # --- ۷) ذخیره در temp ---
         doc.SaveAs(temp_output)

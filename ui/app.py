@@ -30,8 +30,7 @@ class App(QMainWindow):
         self.timer.start(1000)  
         self.ui.deal_time.setTime(QTime.currentTime())
         self.update_today_label()
-        self.ui.print_btn.setEnabled(False)
-        self.ui.preview_btn.setEnabled(False)
+        self.ui.search_btn.clicked.connect(self.open_search_window)
         self.ui.save_btn.clicked.connect(self.on_archive_btn_clicked)
         self.ui.save_dir_btn.clicked.connect(self.on_save_dir_btn_clicked)
         self.ui.checkpoint_img_btn.clicked.connect(self.on_checkpoint_img_clicked)
@@ -400,4 +399,7 @@ class App(QMainWindow):
                 f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}"
             )
 
-
+    def open_search_window(self):
+        from .search import SearchApp
+        self.search_window = SearchApp()
+        self.search_window.show()

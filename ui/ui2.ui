@@ -499,25 +499,6 @@ border-radius: 10px;</string>
         <string>خودرو</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="add_car">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>2</y>
-         <width>25</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(0, 170, 0);</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset theme="QIcon::ThemeIcon::ContactNew"/>
-       </property>
-      </widget>
      </widget>
      <widget class="QLabel" name="label_26">
       <property name="geometry">
@@ -1391,9 +1372,9 @@ border-radius: 10px;</string>
       <property name="geometry">
        <rect>
         <x>168</x>
-        <y>70</y>
+        <y>69</y>
         <width>91</width>
-        <height>20</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="font">
@@ -1913,7 +1894,7 @@ border-radius: 10px;</string>
        <rect>
         <x>5</x>
         <y>7</y>
-        <width>80</width>
+        <width>125</width>
         <height>26</height>
        </rect>
       </property>
@@ -1933,15 +1914,15 @@ border-radius: 5px;</string>
        <string>جدید</string>
       </property>
       <property name="icon">
-       <iconset theme="QIcon::ThemeIcon::DocumentNew"/>
+       <iconset theme="QIcon::ThemeIcon::ContactNew"/>
       </property>
      </widget>
-     <widget class="QPushButton" name="print_btn">
+     <widget class="QPushButton" name="search_btn">
       <property name="geometry">
        <rect>
-        <x>92</x>
+        <x>135</x>
         <y>7</y>
-        <width>81</width>
+        <width>125</width>
         <height>26</height>
        </rect>
       </property>
@@ -1957,38 +1938,10 @@ border-radius: 5px;</string>
 border-radius: 5px;</string>
       </property>
       <property name="text">
-       <string>چاپ</string>
+       <string>جتسجو</string>
       </property>
       <property name="icon">
-       <iconset theme="QIcon::ThemeIcon::Scanner"/>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="preview_btn">
-      <property name="geometry">
-       <rect>
-        <x>180</x>
-        <y>7</y>
-        <width>81</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>IRANSansDN</family>
-        <pointsize>8</pointsize>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: #0891B2;
-border-radius: 5px;
-</string>
-      </property>
-      <property name="text">
-       <string>پیش نمایش</string>
-      </property>
-      <property name="icon">
-       <iconset theme="QIcon::ThemeIcon::DocumentPrintPreview"/>
+       <iconset theme="QIcon::ThemeIcon::SystemSearch"/>
       </property>
      </widget>
     </widget>
@@ -2135,9 +2088,9 @@ border-radius: 5px;</string>
      <widget class="QLabel" name="label_43">
       <property name="geometry">
        <rect>
-        <x>980</x>
+        <x>920</x>
         <y>7</y>
-        <width>101</width>
+        <width>161</width>
         <height>20</height>
        </rect>
       </property>
@@ -2145,14 +2098,14 @@ border-radius: 5px;</string>
        <font>
         <family>Aria</family>
         <pointsize>12</pointsize>
-        <bold>false</bold>
+        <bold>true</bold>
        </font>
       </property>
       <property name="styleSheet">
        <string notr="true">color: rgb(255, 255, 255);</string>
       </property>
       <property name="text">
-       <string>نویسنده: سوران </string>
+       <string>پشتیبانی: 09223879760</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_44">
@@ -2168,7 +2121,7 @@ border-radius: 5px;</string>
        <font>
         <family>Aria</family>
         <pointsize>11</pointsize>
-        <bold>false</bold>
+        <bold>true</bold>
        </font>
       </property>
       <property name="styleSheet">
