@@ -3,7 +3,7 @@ import sqlite3
 import json
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLineEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem
+    QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QMessageBox
 )
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
@@ -24,7 +24,7 @@ class SearchApp(QWidget):
         # استایل کلی
         self.setStyleSheet("""
             QWidget {
-                font-family: Vazirmatn, Arial;
+                font-family: Aria, Pelak;
                 font-size: 14px;
             }
 
@@ -42,7 +42,7 @@ class SearchApp(QWidget):
                 border-radius: 6px;
                 font-weight: bold;
             }
-
+            
             QPushButton:hover {
                 background-color: #43a047;
             }
@@ -75,7 +75,16 @@ class SearchApp(QWidget):
 
         # دکمه‌ها
         self.search_btn = QPushButton("جستجو")
+        self.search_btn.setStyleSheet("""
+                background-color: #1C4D8D;
+                color: white;
+                           """)
         self.open_btn = QPushButton("باز کردن قرارداد")
+        self.delete_btn = QPushButton("حذف")
+        self.delete_btn.setStyleSheet("""
+                background-color: #C3110C;
+                color: white;
+                           """)
 
         # جدول
         self.table = QTableWidget()
@@ -98,6 +107,7 @@ class SearchApp(QWidget):
         layout.addLayout(top_layout)
         layout.addWidget(self.table)
         layout.addWidget(self.open_btn)
+        layout.addWidget(self.delete_btn)
 
         # اتصال‌ها
         self.search_btn.clicked.connect(self.search)
@@ -105,6 +115,7 @@ class SearchApp(QWidget):
         self.ncode_edit.textChanged.connect(self.search)
         self.dealnum_edit.textChanged.connect(self.search)
         self.open_btn.clicked.connect(self.open_selected)
+        self.delete_btn.clicked.connect(self.delete_selected)
 
         # اولین بار همه را نمایش بده
         self.search()
@@ -176,6 +187,36 @@ class SearchApp(QWidget):
             if file_path:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
 
+    def delete_selected(self):
+        row = self.table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "خطا", "لطفاً یک ردیف را انتخاب کنید.")
+            return
+
+        contract_number = self.table.item(row, 2).text()
+
+        confirm = QMessageBox.question(
+            self,
+            "تأیید حذف",
+            f"آیا از حذف قرارداد شماره {contract_number} مطمئن هستید؟",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if confirm != QMessageBox.Yes:
+            return
+
+        try:
+            with sqlite3.connect("settings.db") as conn:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM contracts WHERE contract_number=?", (contract_number,))
+                conn.commit()
+
+            QMessageBox.information(self, "حذف شد", "قرارداد با موفقیت حذف شد.")
+
+            self.search()  # رفرش جدول
+
+        except Exception as e:
+            QMessageBox.critical(self, "خطا", f"در حذف قرارداد مشکلی رخ داد:\n{str(e)}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

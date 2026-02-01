@@ -159,18 +159,23 @@ class App(QMainWindow):
    
     def setup_contract_number(self):
         try:
-            self.db.cursor.execute("SELECT MAX(contract_number) FROM contracts")
-            row = self.db.cursor.fetchone()
+            with self.db.connect() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT MAX(contract_number) FROM contracts")
+                row = cur.fetchone()
+
             if row and row[0]:
                 next_number = row[0] + 1
             else:
                 next_number = 10000
+
             self.current_contract_number = next_number
             self.ui.deal_num.setText(str(next_number))
             logging.info(f"Next contract number loaded: {next_number}")
+
         except Exception as e:
-                logging.error(f"Error loading contract number: {str(e)}")
-                self.ui.deal_num.setText("خطا")
+            logging.error(f"Error loading contract number: {str(e)}")
+            self.ui.deal_num.setText("خطا")
 
     def on_save_dir_btn_clicked(self):
         new_path = QFileDialog.getExistingDirectory(self, "انتخاب مسیر جدید ذخیره قراردادها")
@@ -264,16 +269,36 @@ class App(QMainWindow):
             }
         }
 
-        # 🔥 اضافه کردن نام کامل فروشنده و خریدار
+        # نام کامل
         data["seller"]["fname"] = f"{data['seller']['name']} {data['seller']['lname']}"
         data["buyer"]["fname"] = f"{data['buyer']['name']} {data['buyer']['lname']}"
 
         return data
-            
+
+    def validate_person_fields(self, buyer, seller):
+        errors = []
+
+        # Seller
+        if not seller.get("name", "").strip():
+            errors.append("نام فروشنده نباید خالی باشد")
+        if not seller.get("lname", "").strip():
+            errors.append("نام خانوادگی فروشنده نباید خالی باشد")
+        if not seller.get("national_code", "").strip():
+            errors.append("کد ملی فروشنده نباید خالی باشد")
+
+        # Buyer
+        if not buyer.get("name", "").strip():
+            errors.append("نام خریدار نباید خالی باشد")
+        if not buyer.get("lname", "").strip():
+            errors.append("نام خانوادگی خریدار نباید خالی باشد")
+        if not buyer.get("national_code", "").strip():
+            errors.append("کد ملی خریدار نباید خالی باشد")
+
+        return errors
+
     def on_archive_btn_clicked(self):
 
         try:
-            # شروع فرآیند
             self.db.logger.log("archive_start", "", {})
 
             # ۱) جمع‌آوری داده‌ها
@@ -283,40 +308,31 @@ class App(QMainWindow):
 
             contract_number = data["deal_info"]["deal_num"]
 
-            # ۲) ساخت temp
+            # 🔥 ۲) Validation — اینجا باید باشد
+            errors = self.validate_person_fields(data["buyer"], data["seller"])
+            if errors:
+                QMessageBox.warning(self, "خطا", "\n".join(errors))
+                return
+
+            # ۳) ساخت temp
             root_dir = os.getcwd()
             temp_dir = os.path.join(root_dir, "temp")
             os.makedirs(temp_dir, exist_ok=True)
 
-            # ۳) ذخیره JSON در temp
+            # ذخیره JSON
             json_path = os.path.join(temp_dir, f"contract_{contract_number}.json")
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            self.db.logger.log(
-                "archive_json_saved",
-                "",
-                {"json_path": json_path}
-            )
+            self.db.logger.log("archive_json_saved", "", {"json_path": json_path})
 
             # ۴) بررسی عکس کارشناسی
             checkpoint_path = os.path.join(root_dir, "checkpoint_final.png")
             if not os.path.exists(checkpoint_path):
-                self.db.logger.log(
-                    "archive_error",
-                    "checkpoint_not_found",
-                    {}
-                )
                 QMessageBox.warning(self, "خطا", "تصویر کارشناسی یافت نشد.")
                 return
 
-            self.db.logger.log(
-                "archive_checkpoint_found",
-                "",
-                {"checkpoint_path": checkpoint_path}
-            )
-
-            # ۵) ساخت فایل Word با ContractGenerator
+            # ۵) ساخت Word
             save_dir = self.db.get_save_path()
             generator = ContractGenerator()
 
@@ -326,80 +342,54 @@ class App(QMainWindow):
                 output_dir=save_dir
             )
 
-            self.db.logger.log(
-                "archive_word_generated",
-                "",
-                {"docx_path": docx_path}
-            )
-
             # ۶) ذخیره در دیتابیس
             seller_json = json.dumps(data["seller"], ensure_ascii=False)
             buyer_json = json.dumps(data["buyer"], ensure_ascii=False)
             car_json = json.dumps(data["car_deal"], ensure_ascii=False)
             deal_json = json.dumps(data["deal_info"], ensure_ascii=False)
 
-            self.db.cursor.execute(
-                """
-                INSERT INTO contracts (
-                    buyer_id,
-                    seller_id,
-                    file_path,
-                    date_shamsi,
-                    contract_number,
-                    seller_json,
-                    buyer_json,
-                    car_json,
-                    deal_json,
-                    checkpoint_image
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    data["buyer"]["national_code"],
-                    data["seller"]["national_code"],
-                    docx_path,
-                    data["deal_info"]["deal_date"],
-                    int(contract_number),
-                    seller_json,
-                    buyer_json,
-                    car_json,
-                    deal_json,
-                    checkpoint_path,
-                ),
-            )
-            self.db.conn.commit()
+            with self.db.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    INSERT INTO contracts (
+                        buyer_id,
+                        seller_id,
+                        file_path,
+                        date_shamsi,
+                        contract_number,
+                        seller_json,
+                        buyer_json,
+                        car_json,
+                        deal_json,
+                        checkpoint_image
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        data["buyer"]["national_code"],
+                        data["seller"]["national_code"],
+                        docx_path,
+                        data["deal_info"]["deal_date"],
+                        int(contract_number),
+                        seller_json,
+                        buyer_json,
+                        car_json,
+                        deal_json,
+                        checkpoint_path,
+                    ),
+                )
+                conn.commit()
 
-            self.db.logger.log(
-                "archive_db_saved",
-                "",
-                {"contract_number": contract_number}
-            )
-
-            # ۷) پیام موفقیت
-            QMessageBox.information(
-                self,
-                "بایگانی موفق",
-                "قرارداد با موفقیت بایگانی شد."
-            )
-
-            self.db.logger.log(
-                "archive_success",
-                "",
-                {"contract_number": contract_number}
-            )
+            self.setup_contract_number()
+            QMessageBox.information(self, "بایگانی موفق", "قرارداد با موفقیت بایگانی شد.")
 
         except Exception as e:
-            self.db.logger.log(
-                "archive_exception",
-                str(e),
-                {}
-            )
-            QMessageBox.critical(
-                self,
-                "خطا",
-                f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}"
-            )
-
+            QMessageBox.critical(self, "خطا", f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}")
+        
+        
     def open_search_window(self):
         from .search import SearchApp
         self.search_window = SearchApp()
         self.search_window.show()
+
+        

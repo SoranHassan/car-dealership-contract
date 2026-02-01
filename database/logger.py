@@ -9,11 +9,14 @@ class Logger:
         created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         data_json = json.dumps(data, ensure_ascii=False) if data else None
 
-        self.db.cursor.execute(
-            """
-            INSERT INTO logs (action, message, data_json, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (action, message, data_json, created_at)
-        )
-        self.db.conn.commit()
+        # استفاده از connect() جدید
+        with self.db.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO logs (action, message, data_json, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (action, message, data_json, created_at)
+            )
+            conn.commit()
