@@ -1,14 +1,237 @@
 import json
-import sys, logging, os
-from PySide6.QtGui import QPixmap, QIcon
-from PySide6.QtCore import QTimer, Qt, QTime
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QLabel, QVBoxLayout, QMainWindow, QLineEdit, QApplication
+import sys, logging, os, sqlite3
+from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
+from PySide6.QtCore import QTimer, Qt, QTime, QUrl
+from PySide6.QtWidgets import QPushButton, QMessageBox, QFileDialog, QLabel,QHBoxLayout, QVBoxLayout, QMainWindow,QWidget, QLineEdit, QApplication, QTableWidget, QTableWidgetItem
 from ui import Ui_MainWindow
 from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
 from word import ContractGenerator  # فرض: تابع اصلی ساخت ورد
 from ui import Ui_MainWindow
 
+
+
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(relative_path)
+
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+DB_PATH = os.path.join(BASE_DIR, "settings.db")
+
+class SearchApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("جستجوی قراردادها")
+        self.setMinimumWidth(750)
+
+        # استایل کلی
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Aria, Pelak;
+                font-size: 14px;
+            }
+
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #aaa;
+                border-radius: 6px;
+                background: #fafafa;
+            }
+
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                padding: 8px 14px;
+                border-radius: 6px;
+                font-weight: bold;
+            }
+            
+            QPushButton:hover {
+                background-color: #43a047;
+            }
+
+            QTableWidget {
+                border: 1px solid #ccc;
+                gridline-color: #bbb;
+                selection-background-color: #0078d7;
+                selection-color: white;
+                background: white;
+            }
+
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 6px;
+                border: 1px solid #dcdcdc;
+                font-weight: bold;
+            }
+        """)
+
+        # فیلدهای ورودی
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("نام یا نام خانوادگی")
+
+        self.ncode_edit = QLineEdit()
+        self.ncode_edit.setPlaceholderText("کد ملی")
+
+        self.dealnum_edit = QLineEdit()
+        self.dealnum_edit.setPlaceholderText("شماره قرارداد")
+
+        # دکمه‌ها
+        self.search_btn = QPushButton("جستجو")
+        self.search_btn.setStyleSheet("""
+                background-color: #1C4D8D;
+                color: white;
+                           """)
+        self.open_btn = QPushButton("باز کردن قرارداد")
+        self.delete_btn = QPushButton("حذف")
+        self.delete_btn.setStyleSheet("""
+                background-color: #C3110C;
+                color: white;
+                           """)
+
+        # جدول
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["خریدار", "فروشنده", "شماره قرارداد"])
+
+        # تنظیم سایز سلول‌ها
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setDefaultSectionSize(220)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+
+        # چیدمان
+        top_layout = QHBoxLayout()
+        top_layout.addWidget(self.name_edit)
+        top_layout.addWidget(self.ncode_edit)
+        top_layout.addWidget(self.dealnum_edit)
+        top_layout.addWidget(self.search_btn)
+
+        layout = QVBoxLayout(self)
+        layout.addLayout(top_layout)
+        layout.addWidget(self.table)
+        layout.addWidget(self.open_btn)
+        layout.addWidget(self.delete_btn)
+
+        # اتصال‌ها
+        self.search_btn.clicked.connect(self.search)
+        self.name_edit.textChanged.connect(self.search)
+        self.ncode_edit.textChanged.connect(self.search)
+        self.dealnum_edit.textChanged.connect(self.search)
+        self.open_btn.clicked.connect(self.open_selected)
+        self.delete_btn.clicked.connect(self.delete_selected)
+
+        # اولین بار همه را نمایش بده
+        self.search()
+
+    def search(self):
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        name = self.name_edit.text().strip()
+        ncode = self.ncode_edit.text().strip()
+        dealnum = self.dealnum_edit.text().strip()
+
+        query = """
+            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path
+            FROM contracts
+            WHERE 1=1
+        """
+        params = []
+
+        if name:
+            query += " AND (buyer_json LIKE ? OR seller_json LIKE ?)"
+            params.append(f"%{name}%")
+            params.append(f"%{name}%")
+
+        if ncode:
+            query += " AND buyer_id LIKE ?"
+            params.append(f"%{ncode}%")
+
+        if dealnum:
+            query += " AND contract_number LIKE ?"
+            params.append(f"%{dealnum}%")
+
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        conn.close()
+
+        self.table.setRowCount(len(rows))
+
+        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path) in enumerate(rows):
+
+            # تبدیل JSON به dict
+            buyer = json.loads(buyer_json)
+            seller = json.loads(seller_json)
+
+            buyer_name = f"{buyer['name']} {buyer['lname']}"
+            seller_name = f"{seller['name']} {seller['lname']}"
+
+            # نمایش فقط نام‌ها و شماره قرارداد
+            self.table.setItem(row_idx, 0, QTableWidgetItem(buyer_name))
+            self.table.setItem(row_idx, 1, QTableWidgetItem(seller_name))
+            self.table.setItem(row_idx, 2, QTableWidgetItem(str(contract_number)))
+
+    def open_selected(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return
+
+        # ستون مسیر فایل دیگر در جدول نیست → باید دوباره از دیتابیس بخوانیم
+        contract_number = self.table.item(row, 2).text()
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT file_path FROM contracts WHERE contract_number = ?", (contract_number,))
+        result = cur.fetchone()
+        conn.close()
+
+        if result:
+            file_path = result[0]
+            if file_path:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
+
+    def delete_selected(self):
+        row = self.table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "خطا", "لطفاً یک ردیف را انتخاب کنید.")
+            return
+
+        contract_number = self.table.item(row, 2).text()
+
+        confirm = QMessageBox.question(
+            self,
+            "تأیید حذف",
+            f"آیا از حذف قرارداد شماره {contract_number} مطمئن هستید؟",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if confirm != QMessageBox.Yes:
+            return
+
+        try:
+            with sqlite3.connect("settings.db") as conn:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM contracts WHERE contract_number=?", (contract_number,))
+                conn.commit()
+
+            QMessageBox.information(self, "حذف شد", "قرارداد با موفقیت حذف شد.")
+
+            self.search()  # رفرش جدول
+
+        except Exception as e:
+            QMessageBox.critical(self, "خطا", f"در حذف قرارداد مشکلی رخ داد:\n{str(e)}")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = SearchApp()
+    w.show()
+    sys.exit(app.exec())
 
 
 class App(QMainWindow):
@@ -54,7 +277,7 @@ class App(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)  # حذف حاشیه‌ها
         layout.addWidget(self.image_label)
         
-        self.load_image("./assets/banner.jpg")  
+        self.load_image("./assets/images/banner.jpg")  
 
         # ------------- Logo 
         self.logo_frame = self.ui.logo_frame
@@ -66,7 +289,7 @@ class App(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.logo_label)
         
-        self.load_logo("./assets/logo.png") 
+        self.load_logo("./assets/images/logo.png") 
 
     def fill_pelak_alpha(self):
         letters = ['ب', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی']
@@ -118,45 +341,47 @@ class App(QMainWindow):
    
     def load_logo(self, logo_path):
         try:
+            logo_path = resource_path(logo_path)   # ← مهم
 
             pixmap = QPixmap(logo_path)
             
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(
-                    110, 110,  
-                    Qt.KeepAspectRatio,  
-                    Qt.SmoothTransformation)
-                
+                    110, 110,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
                 self.logo_label.setPixmap(scaled_pixmap)
-                self.logo_label.setText("")  
-                
+                self.logo_label.setText("")
                 self.logo_label.setFixedSize(110, 110)
-                
                 self.logo_label.setScaledContents(True)
             else:
                 self.logo_label.setText("خطا در بارگذاری لوگو")
                 self.logo_label.setStyleSheet("color: red;")
-                
+
         except Exception as e:
             self.logo_label.setText(f"خطا: {str(e)}")
   
     def load_image(self, image_path):
         try:
+            image_path = resource_path(image_path)   # ← مهم
+
             pixmap = QPixmap(image_path)
             if not pixmap.isNull():
                 pixmap = pixmap.scaled(
                     self.frame.width(),
                     self.frame.height(),
                     Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation)
+                    Qt.SmoothTransformation
+                )
                 self.image_label.setPixmap(pixmap)
-                self.image_label.setText("")  
+                self.image_label.setText("")
             else:
                 self.image_label.setText("خطا در بارگذاری عکس")
                 self.image_label.setStyleSheet("color: red;")
         except Exception as e:
             self.image_label.setText(f"خطا: {str(e)}")
-   
+    
     def setup_contract_number(self):
         try:
             with self.db.connect() as conn:
@@ -222,9 +447,15 @@ class App(QMainWindow):
 
     def get_data(self):
 
-        pelak_part1 = f"{self.ui.pelak_two.text()}-{self.ui.pelak_three.text()}"
-        pelak_part2 = f"{self.ui.pelak_alpha.currentText()}-{self.ui.pelak_iran.text()}"
+        RLM = "\u200F"
+        LRM = "\u200E"
 
+        pelak_full = (
+            f"{LRM}{self.ui.pelak_two.text()}{RLM}"
+            f"{self.ui.pelak_alpha.currentText()}{RLM}"
+            f"{LRM}{self.ui.pelak_three.text()}{RLM}ایران{LRM}{self.ui.pelak_iran.text()}"
+        )
+                
         data = {
             "seller": {
                 "name": self.ui.seller_name.text(),
@@ -256,7 +487,7 @@ class App(QMainWindow):
                 "body_id": self.ui.car_body_id.text(),
                 "motor_id": self.ui.car_motor_id.text(),
                 "kilometer": self.ui.car_kilometer.text(),
-                "pelak": [pelak_part1, pelak_part2],
+                "pelak": pelak_full,
                 "car_info": self.ui.car_info.text()
             },
             "deal_info": {
@@ -383,12 +614,11 @@ class App(QMainWindow):
             self.setup_contract_number()
             QMessageBox.information(self, "بایگانی موفق", "قرارداد با موفقیت بایگانی شد.")
 
+
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}")
-        
-        
+          
     def open_search_window(self):
-        from .search import SearchApp
         self.search_window = SearchApp()
         self.search_window.show()
 

@@ -1,4 +1,4 @@
-from ui.search import SearchApp
+from ui.search_window import SearchApp
 from PySide6.QtWidgets import QApplication
 import sys
 import os

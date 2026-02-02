@@ -4,11 +4,17 @@ import json
 import shutil
 import tempfile
 from persiantools.jdatetime import JalaliDate
+import sys
+
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(relative_path)
 
 class ContractGenerator:
 
     def __init__(self):
-        self.word_template = r"./assets/AG.docx"
+        self.word_template = resource_path("./assets/AG.docx")
 
     def generate(self, json_path, checkpoint_image_path, output_dir):
         """
@@ -129,7 +135,7 @@ class ContractGenerator:
         flat["body_id"] = data["car_deal"]["body_id"]
         flat["motor_id"] = data["car_deal"]["motor_id"]
         flat["car_kilometer"] = data["car_deal"]["kilometer"]
-        flat["pelak"] = " ".join(data["car_deal"]["pelak"])
+        flat["pelak"] = data["car_deal"]["pelak"]
         flat["car_info"] = data["car_deal"]["car_info"]
 
         # -------------------------
