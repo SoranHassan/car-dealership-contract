@@ -273,7 +273,7 @@ border-radius: 10px;</string>
        <string notr="true">color: rgb(255, 255, 255);</string>
       </property>
       <property name="text">
-       <string>مبلغ(ریال):</string>
+       <string>مبلغ(حروف):</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_37">
@@ -1733,7 +1733,7 @@ border-radius: 10px;</string>
       <property name="font">
        <font>
         <family>IRANSansDN</family>
-        <pointsize>12</pointsize>
+        <pointsize>10</pointsize>
         <bold>true</bold>
        </font>
       </property>
@@ -1741,7 +1741,7 @@ border-radius: 10px;</string>
        <string notr="true">color: rgb(255, 255, 255);</string>
       </property>
       <property name="text">
-       <string>مبلغ به صورت:</string>
+       <string>پرداخت به صورت:</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="price_info">
@@ -1911,7 +1911,7 @@ background-color: rgb(85, 170, 255);
 border-radius: 5px;</string>
       </property>
       <property name="text">
-       <string>جدید</string>
+       <string>قرارداد جدید</string>
       </property>
       <property name="icon">
        <iconset theme="QIcon::ThemeIcon::ContactNew"/>
@@ -1938,7 +1938,7 @@ border-radius: 5px;</string>
 border-radius: 5px;</string>
       </property>
       <property name="text">
-       <string>جتسجو</string>
+       <string>جستجو</string>
       </property>
       <property name="icon">
        <iconset theme="QIcon::ThemeIcon::SystemSearch"/>
@@ -2111,7 +2111,7 @@ border-radius: 5px;</string>
      <widget class="QLabel" name="label_44">
       <property name="geometry">
        <rect>
-        <x>390</x>
+        <x>0</x>
         <y>7</y>
         <width>311</width>
         <height>20</height>
@@ -2120,7 +2120,7 @@ border-radius: 5px;</string>
       <property name="font">
        <font>
         <family>Aria</family>
-        <pointsize>11</pointsize>
+        <pointsize>10</pointsize>
         <bold>true</bold>
        </font>
       </property>
@@ -2129,6 +2129,29 @@ border-radius: 5px;</string>
       </property>
       <property name="text">
        <string>طراحی و برنامه نویسی شده برای نمایشگاه خودرو گریده</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_45">
+      <property name="geometry">
+       <rect>
+        <x>420</x>
+        <y>10</y>
+        <width>241</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Aria</family>
+        <pointsize>10</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);</string>
+      </property>
+      <property name="text">
+       <string>هرگونه استفاده و کپی برداری پیگیرد قانونی دارد</string>
       </property>
      </widget>
     </widget>
