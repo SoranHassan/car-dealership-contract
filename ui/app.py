@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QPushButton, QMessageBox, QFileDialog, QLabel,QHBo
 from ui import Ui_MainWindow
 from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
-from word import ContractGenerator  # فرض: تابع اصلی ساخت ورد
+from word import ContractGenerator  
 from ui import Ui_MainWindow
 
 
