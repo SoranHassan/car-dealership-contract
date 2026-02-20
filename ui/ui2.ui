@@ -517,9 +517,26 @@ border-radius: 5px;</string>
         <height>22</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LayoutDirection::RightToLeft</enum>
+      </property>
+      <property name="autoFillBackground">
+       <bool>true</bool>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(255, 255, 255);
 border-radius: 5px;</string>
+      </property>
+      <property name="locale">
+       <locale language="Persian" country="Iran"/>
+      </property>
+      <property name="editable">
+       <bool>false</bool>
       </property>
      </widget>
     </widget>
@@ -2113,6 +2130,12 @@ border-radius: 5px;</string>
        <width>1090</width>
        <height>121</height>
       </rect>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LayoutDirection::RightToLeft</enum>
+     </property>
+     <property name="autoFillBackground">
+      <bool>true</bool>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(0, 0, 0);</string>

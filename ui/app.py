@@ -502,7 +502,7 @@ class App(QMainWindow):
                 )
                 self.logo_label.setPixmap(scaled_pixmap)
                 self.logo_label.setText("")
-                self.logo_label.setFixedSize(110, 110)
+                self.logo_label.setFixedSize(76, 76)
                 self.logo_label.setScaledContents(True)
             else:
                 self.logo_label.setText("خطا در بارگذاری لوگو")
