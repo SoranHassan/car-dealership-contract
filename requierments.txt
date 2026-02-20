@@ -1,1 +1,0 @@
-19-ج-<PySide6.QtWidgets.QLineEdit(0x1aba6a7bcc0, name="pelak_three") at 0x000001ABA70A9700> 27

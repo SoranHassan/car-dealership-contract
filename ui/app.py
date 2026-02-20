@@ -2,7 +2,7 @@ import json
 import sys, logging, os, sqlite3
 from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
 from PySide6.QtCore import QTimer, Qt, QTime, QUrl
-from PySide6.QtWidgets import QPushButton, QMessageBox, QFileDialog, QLabel,QHBoxLayout, QVBoxLayout, QMainWindow,QWidget, QLineEdit, QApplication, QTableWidget, QTableWidgetItem
+from PySide6.QtWidgets import QComboBox, QPushButton, QMessageBox, QFileDialog, QLabel,QHBoxLayout, QVBoxLayout, QMainWindow,QWidget, QLineEdit, QApplication, QTableWidget, QTableWidgetItem
 from ui import Ui_MainWindow
 from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
@@ -25,7 +25,7 @@ else:
 DB_PATH = os.path.join(BASE_DIR, "settings.db")
 
 class SearchApp(QWidget):
-    def __init__(self):
+    def __init__(self, db):
         super().__init__()
         self.setWindowTitle("جستجوی قراردادها")
         self.setMinimumWidth(750)
@@ -82,6 +82,11 @@ class SearchApp(QWidget):
         self.dealnum_edit = QLineEdit()
         self.dealnum_edit.setPlaceholderText("شماره قرارداد")
 
+        self.payed_filter = QComboBox()
+        self.payed_filter.addItem("همه", None)
+        self.payed_filter.addItem("پرداخت شده", 1)
+        self.payed_filter.addItem("پرداخت نشده", 0)
+
         # دکمه‌ها
         self.search_btn = QPushButton("جستجو")
         self.search_btn.setStyleSheet("""
@@ -97,8 +102,9 @@ class SearchApp(QWidget):
 
         # جدول
         self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["خریدار", "فروشنده", "شماره قرارداد"])
+        self.table.itemChanged.connect(self.on_item_changed)
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["خریدار", "فروشنده", "شماره قرارداد", "پرداخت"])
 
         # تنظیم سایز سلول‌ها
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -111,6 +117,7 @@ class SearchApp(QWidget):
         top_layout.addWidget(self.ncode_edit)
         top_layout.addWidget(self.dealnum_edit)
         top_layout.addWidget(self.search_btn)
+        top_layout.addWidget(self.payed_filter)
 
         layout = QVBoxLayout(self)
         layout.addLayout(top_layout)
@@ -125,6 +132,7 @@ class SearchApp(QWidget):
         self.dealnum_edit.textChanged.connect(self.search)
         self.open_btn.clicked.connect(self.open_selected)
         self.delete_btn.clicked.connect(self.delete_selected)
+        self.payed_filter.currentIndexChanged.connect(self.search)
 
         # اولین بار همه را نمایش بده
         self.search()
@@ -136,9 +144,10 @@ class SearchApp(QWidget):
         name = self.name_edit.text().strip()
         ncode = self.ncode_edit.text().strip()
         dealnum = self.dealnum_edit.text().strip()
+        payed_value = self.payed_filter.currentData()
 
         query = """
-            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path
+            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed
             FROM contracts
             WHERE 1=1
         """
@@ -157,13 +166,23 @@ class SearchApp(QWidget):
             query += " AND contract_number LIKE ?"
             params.append(f"%{dealnum}%")
 
+        if payed_value is not None:
+            query += " AND is_payed = ?"
+            params.append(payed_value)
+
         cur.execute(query, params)
         rows = cur.fetchall()
         conn.close()
 
+
+        self.table.blockSignals(True)   # ← باید اینجا باشد
+
         self.table.setRowCount(len(rows))
 
-        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path) in enumerate(rows):
+        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed) in enumerate(rows):
+
+            if is_payed is None:
+                is_payed = 0
 
             # تبدیل JSON به dict
             buyer = json.loads(buyer_json)
@@ -176,6 +195,27 @@ class SearchApp(QWidget):
             self.table.setItem(row_idx, 0, QTableWidgetItem(buyer_name))
             self.table.setItem(row_idx, 1, QTableWidgetItem(seller_name))
             self.table.setItem(row_idx, 2, QTableWidgetItem(str(contract_number)))
+
+            checkbox = QTableWidgetItem()
+            checkbox.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+
+            if is_payed == 1:
+                checkbox.setCheckState(Qt.Checked)
+            else:
+                checkbox.setCheckState(Qt.Unchecked)
+
+            self.table.setItem(row_idx, 3, checkbox)
+
+            from PySide6.QtGui import QColor
+            if is_payed == 1:
+                color = QColor(200, 255, 200)  # سبز روشن
+            else:
+                color = QColor(255, 200, 200)  # قرمز روشن
+
+            for col in range(3):
+                self.table.item(row_idx, col).setBackground(color)
+
+        self.table.blockSignals(False)  # ← اینجا درست است
 
     def open_selected(self):
         row = self.table.currentRow()
@@ -227,6 +267,73 @@ class SearchApp(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"در حذف قرارداد مشکلی رخ داد:\n{str(e)}")
 
+    def on_item_changed(self, item):
+        # فقط ستون چک‌باکس
+        if item.column() != 3:
+            return
+
+        row = item.row()
+        contract_number = self.table.item(row, 2).text()
+
+        new_value = 1 if item.checkState() == Qt.Checked else 0
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("UPDATE contracts SET is_payed=? WHERE contract_number=?", (new_value, contract_number))
+        conn.commit()
+        self.update_contract_word(contract_number)
+        conn.close()
+
+        # رنگ ردیف را آپدیت کن
+        from PySide6.QtGui import QColor
+        color = QColor(200, 255, 200) if new_value == 1 else QColor(255, 200, 200)
+
+        for col in range(3):
+            self.table.item(row, col).setBackground(color)   
+
+    def update_contract_word(self, contract_number):
+        # ۱) گرفتن اطلاعات قرارداد از دیتابیس
+        with self.db.connect() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT seller_json, buyer_json, car_json, deal_json, checkpoint_image, file_path FROM contracts WHERE contract_number = ?", (contract_number,))
+            row = cur.fetchone()
+
+        if not row:
+            return
+
+        seller_json, buyer_json, car_json, deal_json, checkpoint_path, old_docx_path = row
+
+        # ۲) ساخت JSON کامل
+        data = {
+            "seller": json.loads(seller_json),
+            "buyer": json.loads(buyer_json),
+            "car_deal": json.loads(car_json),
+            "deal_info": json.loads(deal_json)
+        }
+
+        # ۳) ذخیره JSON در temp
+        temp_json = os.path.join(os.getcwd(), "temp", f"contract_{contract_number}.json")
+        os.makedirs(os.path.dirname(temp_json), exist_ok=True)
+
+        with open(temp_json, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        # ۴) ساخت Word جدید
+        generator = ContractGenerator()
+        save_dir = os.path.dirname(old_docx_path)
+
+        new_docx = generator.generate(
+            json_path=temp_json,
+            checkpoint_image_path=checkpoint_path,
+            output_dir=save_dir
+        )
+
+        # ۵) آپدیت مسیر فایل در دیتابیس (اگر لازم باشد)
+        with self.db.connect() as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE contracts SET file_path = ? WHERE contract_number = ?", (new_docx, contract_number))
+            conn.commit()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     w = SearchApp()
@@ -235,14 +342,21 @@ if __name__ == "__main__":
 
 
 class App(QMainWindow):
-    
+
     def __init__(self):
         super().__init__()
-
+        
         self.db = DatabaseManager()
         self.check_first_run()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.ui.deal_time.setDisplayFormat("HH:mm")
+
+        self.ui.is_payed.clear()
+        self.ui.is_payed.addItem("انتخاب کنید", None)
+        self.ui.is_payed.addItem("پرداخت شده", 1)
+        self.ui.is_payed.addItem("پرداخت نشده", 0)
 
         self.is_exchange = False       
         self.car1_data = None          
@@ -258,6 +372,7 @@ class App(QMainWindow):
         self.ui.save_dir_btn.clicked.connect(self.on_save_dir_btn_clicked)
         self.ui.checkpoint_img_btn.clicked.connect(self.on_checkpoint_img_clicked)
         self.ui.new_deal_btn.clicked.connect(self.on_new_deal_clicked)
+        self.ui.update_db.clicked.connect(self.on_update_db_clicked)
         self.setup_contract_number()
         self.fill_pelak_alpha()
 
@@ -290,6 +405,40 @@ class App(QMainWindow):
         layout.addWidget(self.logo_label)
         
         self.load_logo("./assets/images/logo.png") 
+
+    def on_update_db_clicked(self):
+        try:
+            conn = sqlite3.connect("settings.db")
+            cur = conn.cursor()
+
+            # بررسی وجود ستون
+            cur.execute("PRAGMA table_info(contracts)")
+            columns = [col[1] for col in cur.fetchall()]
+
+            if "is_payed" not in columns:
+                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT 0")
+                conn.commit()
+
+                QMessageBox.information(
+                    self,
+                    "بروزرسانی انجام شد",
+                    "دیتابیس با موفقیت بروزرسانی شد"
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "بروزرسانی انجام شد",
+                    "تنظیمات از قبل وجود دارد"
+                )
+
+            conn.close()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "خطا",
+                f"در بروزرسانی دیتابیس مشکلی رخ داد:\n{str(e)}"
+            )
 
     def fill_pelak_alpha(self):
         letters = ['ب', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی']
@@ -347,7 +496,7 @@ class App(QMainWindow):
             
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(
-                    110, 110,
+                    76, 76,
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation
                 )
@@ -440,8 +589,14 @@ class App(QMainWindow):
             final_img.save("checkpoint_final.png")
  
     def clear_all_fields(self):
-        self.clear_all_fields()
+        # پاک کردن تمام QLineEdit ها
+        for widget in self.findChildren(QLineEdit):
+            widget.clear()
 
+        # ریست پلاک
+        self.ui.pelak_alpha.setCurrentIndex(0)
+
+        # حذف عکس کارشناسی اگر وجود دارد
         if hasattr(self, "checkpoint_image_path"):
             del self.checkpoint_image_path
 
@@ -496,7 +651,8 @@ class App(QMainWindow):
                 "day_respite": self.ui.day_respite.text(),
                 "price_rial": self.ui.price_rial.text(),
                 "price_toman": self.ui.price_toman.text(),
-                "price_info": self.ui.price_info.text()
+                "price_info": self.ui.price_info.text(),
+                "is_payed": self.ui.is_payed.currentData()
             }
         }
 
@@ -562,6 +718,10 @@ class App(QMainWindow):
             if not os.path.exists(checkpoint_path):
                 QMessageBox.warning(self, "خطا", "تصویر کارشناسی یافت نشد.")
                 return
+            
+            if data["deal_info"]["is_payed"] is None:
+                QMessageBox.warning(self, "خطا", "لطفاً وضعیت پرداخت را انتخاب کنید.")
+                return
 
             # ۵) ساخت Word
             save_dir = self.db.get_save_path()
@@ -593,8 +753,9 @@ class App(QMainWindow):
                         buyer_json,
                         car_json,
                         deal_json,
-                        checkpoint_image
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        checkpoint_image,
+                        is_payed
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         data["buyer"]["national_code"],
@@ -607,6 +768,7 @@ class App(QMainWindow):
                         car_json,
                         deal_json,
                         checkpoint_path,
+                        data["deal_info"]["is_payed"]
                     ),
                 )
                 conn.commit()
@@ -619,7 +781,7 @@ class App(QMainWindow):
             QMessageBox.critical(self, "خطا", f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}")
           
     def open_search_window(self):
-        self.search_window = SearchApp()
+        self.search_window = SearchApp(self.db)
         self.search_window.show()
 
         

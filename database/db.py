@@ -40,7 +40,8 @@ class DatabaseManager:
                     buyer_json TEXT,
                     car_json TEXT,
                     deal_json TEXT,
-                    checkpoint_image TEXT)""")
+                    checkpoint_image TEXT,
+                    is_payed INTEGER)""")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS logs (
@@ -79,7 +80,7 @@ class DatabaseManager:
             return next_num
 
     def save_contract(self, buyer_id, seller_id, file_path, date_shamsi,
-                      seller_json, buyer_json, car_json, deal_json, checkpoint_image):
+                      seller_json, buyer_json, car_json, deal_json, checkpoint_image, is_payed):
 
         contract_number = self.get_next_contract_number()
 
@@ -90,13 +91,13 @@ class DatabaseManager:
                 INSERT INTO contracts (
                     buyer_id, seller_id, file_path, date_shamsi,
                     contract_number, seller_json, buyer_json,
-                    car_json, deal_json, checkpoint_image
+                    car_json, deal_json, checkpoint_image, is_payed
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 buyer_id, seller_id, file_path, date_shamsi,
                 contract_number, seller_json, buyer_json,
-                car_json, deal_json, checkpoint_image
+                car_json, deal_json, checkpoint_image, is_payed
             ))
 
             conn.commit()
