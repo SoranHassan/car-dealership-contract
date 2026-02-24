@@ -1,6 +1,6 @@
 import json
 import sys, logging, os, sqlite3
-from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
+from PySide6.QtGui import QPixmap, QIcon, QDesktopServices, QColor
 from PySide6.QtCore import QTimer, Qt, QTime, QUrl
 from PySide6.QtWidgets import QComboBox, QPushButton, QMessageBox, QFileDialog, QLabel,QHBoxLayout, QVBoxLayout, QMainWindow,QWidget, QLineEdit, QApplication, QTableWidget, QTableWidgetItem
 from ui import Ui_MainWindow
@@ -8,6 +8,7 @@ from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
 from word import ContractGenerator  
 from ui import Ui_MainWindow
+
 
 
 
@@ -27,8 +28,11 @@ DB_PATH = os.path.join(BASE_DIR, "settings.db")
 class SearchApp(QWidget):
     def __init__(self, db):
         super().__init__()
+        self.db = db
         self.setWindowTitle("جستجوی قراردادها")
-        self.setMinimumWidth(750)
+        self.setMinimumWidth(820)
+        self.setMaximumWidth(820)
+        self.setMinimumHeight(500)
 
         # استایل کلی
         self.setStyleSheet("""
@@ -147,7 +151,7 @@ class SearchApp(QWidget):
         payed_value = self.payed_filter.currentData()
 
         query = """
-            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed
+            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed, deal_json
             FROM contracts
             WHERE 1=1
         """
@@ -174,49 +178,42 @@ class SearchApp(QWidget):
         rows = cur.fetchall()
         conn.close()
 
-
-        self.table.blockSignals(True)   # ← باید اینجا باشد
-
+        self.table.blockSignals(True)
         self.table.setRowCount(len(rows))
 
-        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed) in enumerate(rows):
+        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed, deal_json) in enumerate(rows):
 
-            if is_payed is None:
-                is_payed = 0
-
-            # تبدیل JSON به dict
             buyer = json.loads(buyer_json)
             seller = json.loads(seller_json)
+            deal_info = json.loads(deal_json)
+
+            is_old = "is_payed" not in deal_info  # ← تشخیص قرارداد قدیمی
 
             buyer_name = f"{buyer['name']} {buyer['lname']}"
             seller_name = f"{seller['name']} {seller['lname']}"
 
-            # نمایش فقط نام‌ها و شماره قرارداد
             self.table.setItem(row_idx, 0, QTableWidgetItem(buyer_name))
             self.table.setItem(row_idx, 1, QTableWidgetItem(seller_name))
             self.table.setItem(row_idx, 2, QTableWidgetItem(str(contract_number)))
 
             checkbox = QTableWidgetItem()
-            checkbox.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
 
-            if is_payed == 1:
-                checkbox.setCheckState(Qt.Checked)
+            if is_old:
+                checkbox.setFlags(Qt.NoItemFlags)  # ← غیرفعال
+                checkbox.setCheckState(Qt.Checked)  # ← همیشه پرداخت شده
+                row_color = QColor(200, 255, 200)
             else:
-                checkbox.setCheckState(Qt.Unchecked)
+                checkbox.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                checkbox.setCheckState(Qt.Checked if is_payed == 1 else Qt.Unchecked)
+                row_color = QColor(200, 255, 200) if is_payed == 1 else QColor(255, 200, 200)
 
             self.table.setItem(row_idx, 3, checkbox)
 
-            from PySide6.QtGui import QColor
-            if is_payed == 1:
-                color = QColor(200, 255, 200)  # سبز روشن
-            else:
-                color = QColor(255, 200, 200)  # قرمز روشن
+            for col in range(4):
+                self.table.item(row_idx, col).setBackground(row_color)
 
-            for col in range(3):
-                self.table.item(row_idx, col).setBackground(color)
-
-        self.table.blockSignals(False)  # ← اینجا درست است
-
+        self.table.blockSignals(False)
+    
     def open_selected(self):
         row = self.table.currentRow()
         if row < 0:
@@ -268,34 +265,58 @@ class SearchApp(QWidget):
             QMessageBox.critical(self, "خطا", f"در حذف قرارداد مشکلی رخ داد:\n{str(e)}")
 
     def on_item_changed(self, item):
-        # فقط ستون چک‌باکس
         if item.column() != 3:
             return
 
         row = item.row()
         contract_number = self.table.item(row, 2).text()
 
-        new_value = 1 if item.checkState() == Qt.Checked else 0
-
+        # --- تشخیص قرارداد قدیمی ---
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
-        cur.execute("UPDATE contracts SET is_payed=? WHERE contract_number=?", (new_value, contract_number))
+        cur.execute("SELECT deal_json FROM contracts WHERE contract_number=?", (contract_number,))
+        deal_json = cur.fetchone()[0]
+        deal_info = json.loads(deal_json)
+
+        # قرارداد قدیمی → اجازه تغییر نده
+        if "is_payed" not in deal_info:
+            conn.close()
+            self.table.blockSignals(True)
+            item.setCheckState(Qt.Checked)
+            self.table.blockSignals(False)
+            return
+
+        # --- قرارداد جدید ---
+        new_value = 1 if item.checkState() == Qt.Checked else 0
+
+        # هم ستون is_payed و هم deal_json را آپدیت کن
+        deal_info["is_payed"] = new_value
+        new_deal_json = json.dumps(deal_info, ensure_ascii=False)
+
+        cur.execute(
+            "UPDATE contracts SET is_payed = ?, deal_json = ? WHERE contract_number = ?",
+            (new_value, new_deal_json, contract_number)
+        )
         conn.commit()
-        self.update_contract_word(contract_number)
         conn.close()
 
-        # رنگ ردیف را آپدیت کن
+        # Word را با مقدار جدید is_payed بساز
+        self.update_contract_word(contract_number)
+
         from PySide6.QtGui import QColor
         color = QColor(200, 255, 200) if new_value == 1 else QColor(255, 200, 200)
 
-        for col in range(3):
-            self.table.item(row, col).setBackground(color)   
-
+        for col in range(4):
+            self.table.item(row, col).setBackground(color)
+    
     def update_contract_word(self, contract_number):
-        # ۱) گرفتن اطلاعات قرارداد از دیتابیس
+
         with self.db.connect() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT seller_json, buyer_json, car_json, deal_json, checkpoint_image, file_path FROM contracts WHERE contract_number = ?", (contract_number,))
+            cur.execute("""
+                SELECT seller_json, buyer_json, car_json, deal_json, checkpoint_image, file_path
+                FROM contracts WHERE contract_number = ?
+            """, (contract_number,))
             row = cur.fetchone()
 
         if not row:
@@ -303,7 +324,6 @@ class SearchApp(QWidget):
 
         seller_json, buyer_json, car_json, deal_json, checkpoint_path, old_docx_path = row
 
-        # ۲) ساخت JSON کامل
         data = {
             "seller": json.loads(seller_json),
             "buyer": json.loads(buyer_json),
@@ -311,14 +331,16 @@ class SearchApp(QWidget):
             "deal_info": json.loads(deal_json)
         }
 
-        # ۳) ذخیره JSON در temp
+        # --- قرارداد قدیمی → Word را نساز ---
+        if "is_payed" not in data["deal_info"]:
+            return
+
         temp_json = os.path.join(os.getcwd(), "temp", f"contract_{contract_number}.json")
         os.makedirs(os.path.dirname(temp_json), exist_ok=True)
 
         with open(temp_json, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        # ۴) ساخت Word جدید
         generator = ContractGenerator()
         save_dir = os.path.dirname(old_docx_path)
 
@@ -328,7 +350,6 @@ class SearchApp(QWidget):
             output_dir=save_dir
         )
 
-        # ۵) آپدیت مسیر فایل در دیتابیس (اگر لازم باشد)
         with self.db.connect() as conn:
             cur = conn.cursor()
             cur.execute("UPDATE contracts SET file_path = ? WHERE contract_number = ?", (new_docx, contract_number))
@@ -416,7 +437,7 @@ class App(QMainWindow):
             columns = [col[1] for col in cur.fetchall()]
 
             if "is_payed" not in columns:
-                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT 0")
+                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT 1")
                 conn.commit()
 
                 QMessageBox.information(
