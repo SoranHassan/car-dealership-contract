@@ -163,6 +163,7 @@ class ContractGenerator:
         flat["price_rial"] = data["deal_info"]["price_rial"]
         flat["price_toman"] = data["deal_info"]["price_toman"]
         flat["price_info"] = data["deal_info"]["price_info"]
+        flat["description_text"] = data["deal_info"]["description_text"]
 
         # تاریخ شمسی واقعی با persiantools
         flat["deal_date"] = JalaliDate.today().strftime("%Y/%m/%d")
