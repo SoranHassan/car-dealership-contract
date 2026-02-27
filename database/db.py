@@ -9,7 +9,7 @@ class DatabaseManager:
         self._ensure_db_directory()
         self._create_tables()
         self.logger = Logger(self)
-      
+
     def _ensure_db_directory(self):
         db_dir = os.path.dirname(self.db_name)
         if db_dir and not os.path.exists(db_dir):
@@ -17,17 +17,20 @@ class DatabaseManager:
 
     def connect(self):
         return sqlite3.connect(self.db_name)
- 
+
     def _create_tables(self):
         with self.connect() as conn:
             cur = conn.cursor()
 
+            # ---------------- Settings ----------------
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY,
-                    value TEXT)""")
+                    value TEXT
+                )
+            """)
 
-
+            # ---------------- Contracts ----------------
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS contracts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,29 +44,49 @@ class DatabaseManager:
                     car_json TEXT,
                     deal_json TEXT,
                     checkpoint_image TEXT,
-                    is_payed INTEGER)""")
+                    is_payed INTEGER
+                )
+            """)
 
+            # ستون جدید price_info
+            cur.execute("PRAGMA table_info(contracts)")
+            columns = [row[1] for row in cur.fetchall()]
+            if "price_info" not in columns:
+                cur.execute("ALTER TABLE contracts ADD COLUMN price_info TEXT")
+
+            # ستون جدید description_text
+            cur.execute("PRAGMA table_info(contracts)")
+            columns = [row[1] for row in cur.fetchall()]
+            if "description_text" not in columns:
+                cur.execute("ALTER TABLE contracts ADD COLUMN description_text TEXT")
+
+            # ---------------- Logs ----------------
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     action TEXT,
                     message TEXT,
                     data_json TEXT,
-                    created_at TEXT)""")
+                    created_at TEXT
+                )
+            """)
 
-            # جدول شمارنده برای شماره قرارداد
+            # ---------------- Counters ----------------
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS counters (
                     key TEXT PRIMARY KEY,
-                    value INTEGER)""")
+                    value INTEGER
+                )
+            """)
 
-            # اگر مقدار اولیه وجود ندارد، مقدار 10000 بگذار
             cur.execute("""
                 INSERT OR IGNORE INTO counters (key, value)
-                VALUES ('contract_number', 10000)""")
+                VALUES ('contract_number', 10000)
+            """)
 
             conn.commit()
 
+    # ---------------- Contract Number ----------------
     def get_next_contract_number(self):
         with self.connect() as conn:
             cur = conn.cursor()
@@ -79,8 +102,10 @@ class DatabaseManager:
 
             return next_num
 
+    # ---------------- Save Contract ----------------
     def save_contract(self, buyer_id, seller_id, file_path, date_shamsi,
-                      seller_json, buyer_json, car_json, deal_json, checkpoint_image, is_payed):
+                      seller_json, buyer_json, car_json, deal_json,
+                      checkpoint_image, is_payed, price_info, description_text):
 
         contract_number = self.get_next_contract_number()
 
@@ -91,19 +116,22 @@ class DatabaseManager:
                 INSERT INTO contracts (
                     buyer_id, seller_id, file_path, date_shamsi,
                     contract_number, seller_json, buyer_json,
-                    car_json, deal_json, checkpoint_image, is_payed
+                    car_json, deal_json, checkpoint_image,
+                    is_payed, price_info, description_text
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 buyer_id, seller_id, file_path, date_shamsi,
                 contract_number, seller_json, buyer_json,
-                car_json, deal_json, checkpoint_image, is_payed
+                car_json, deal_json, checkpoint_image,
+                is_payed, price_info, description_text
             ))
 
             conn.commit()
 
         return contract_number
 
+    # ---------------- Settings ----------------
     def get_setting(self, key):
         with self.connect() as conn:
             cur = conn.cursor()
@@ -121,8 +149,8 @@ class DatabaseManager:
             """, (key, value))
             conn.commit()
 
+    # ---------------- Logs ----------------
     def log(self, action, message, data_json=""):
-
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute("""
@@ -131,12 +159,14 @@ class DatabaseManager:
             """, (action, message, data_json, datetime.now().isoformat()))
             conn.commit()
 
+    # ---------------- Save Path ----------------
     def get_save_path(self):
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute("SELECT value FROM settings WHERE key='save_path'")
             row = cur.fetchone()
             return row[0] if row else None
+
 
     def set_save_path(self, path):
         with self.connect() as conn:
@@ -147,3 +177,6 @@ class DatabaseManager:
                 ON CONFLICT(key) DO UPDATE SET value=excluded.value
             """, (path,))
             conn.commit()
+
+
+    

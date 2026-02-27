@@ -1,15 +1,16 @@
 import json
 import sys, logging, os, sqlite3
-from PySide6.QtGui import QPixmap, QIcon, QDesktopServices, QColor
-from PySide6.QtCore import QTimer, Qt, QTime, QUrl
-from PySide6.QtWidgets import QComboBox, QPushButton, QMessageBox, QFileDialog, QLabel,QHBoxLayout, QVBoxLayout, QMainWindow,QWidget, QLineEdit, QApplication, QTableWidget, QTableWidgetItem
+from PySide6.QtGui import QPixmap, QTextCursor
+from PySide6.QtCore import QTimer, Qt, QTime
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QLabel, QVBoxLayout, QMainWindow,QLineEdit, QApplication, QFileDialog
 from ui import Ui_MainWindow
 from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
 from word import ContractGenerator  
 from ui import Ui_MainWindow
-
-
+from ui.sync_service import SyncService
+from ui.sync_service import SyncService
+from .search_app import SearchApp
 
 
 def resource_path(relative_path):
@@ -20,346 +21,11 @@ def resource_path(relative_path):
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
+
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 DB_PATH = os.path.join(BASE_DIR, "settings.db")
-
-class SearchApp(QWidget):
-    def __init__(self, db):
-        super().__init__()
-        self.db = db
-        self.setWindowTitle("جستجوی قراردادها")
-        self.setMinimumWidth(820)
-        self.setMaximumWidth(820)
-        self.setMinimumHeight(500)
-
-        # استایل کلی
-        self.setStyleSheet("""
-            QWidget {
-                font-family: Aria, Pelak;
-                font-size: 14px;
-            }
-
-            QLineEdit {
-                padding: 6px;
-                border: 1px solid #aaa;
-                border-radius: 6px;
-                background: #fafafa;
-            }
-
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                padding: 8px 14px;
-                border-radius: 6px;
-                font-weight: bold;
-            }
-            
-            QPushButton:hover {
-                background-color: #43a047;
-            }
-
-            QTableWidget {
-                border: 1px solid #ccc;
-                gridline-color: #bbb;
-                selection-background-color: #0078d7;
-                selection-color: white;
-                background: white;
-            }
-
-            QHeaderView::section {
-                background-color: #f0f0f0;
-                padding: 6px;
-                border: 1px solid #dcdcdc;
-                font-weight: bold;
-            }
-        """)
-
-        # فیلدهای ورودی
-        self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("نام یا نام خانوادگی")
-
-        self.ncode_edit = QLineEdit()
-        self.ncode_edit.setPlaceholderText("کد ملی")
-
-        self.dealnum_edit = QLineEdit()
-        self.dealnum_edit.setPlaceholderText("شماره قرارداد")
-
-        self.payed_filter = QComboBox()
-        self.payed_filter.addItem("همه", None)
-        self.payed_filter.addItem("پرداخت شده", 1)
-        self.payed_filter.addItem("پرداخت نشده", 0)
-
-        # دکمه‌ها
-        self.search_btn = QPushButton("جستجو")
-        self.search_btn.setStyleSheet("""
-                background-color: #1C4D8D;
-                color: white;
-                           """)
-        self.open_btn = QPushButton("باز کردن قرارداد")
-        self.delete_btn = QPushButton("حذف")
-        self.delete_btn.setStyleSheet("""
-                background-color: #C3110C;
-                color: white;
-                           """)
-
-        # جدول
-        self.table = QTableWidget()
-        self.table.itemChanged.connect(self.on_item_changed)
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["خریدار", "فروشنده", "شماره قرارداد", "پرداخت"])
-
-        # تنظیم سایز سلول‌ها
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setDefaultSectionSize(220)
-        self.table.verticalHeader().setDefaultSectionSize(34)
-
-        # چیدمان
-        top_layout = QHBoxLayout()
-        top_layout.addWidget(self.name_edit)
-        top_layout.addWidget(self.ncode_edit)
-        top_layout.addWidget(self.dealnum_edit)
-        top_layout.addWidget(self.search_btn)
-        top_layout.addWidget(self.payed_filter)
-
-        layout = QVBoxLayout(self)
-        layout.addLayout(top_layout)
-        layout.addWidget(self.table)
-        layout.addWidget(self.open_btn)
-        layout.addWidget(self.delete_btn)
-
-        # اتصال‌ها
-        self.search_btn.clicked.connect(self.search)
-        self.name_edit.textChanged.connect(self.search)
-        self.ncode_edit.textChanged.connect(self.search)
-        self.dealnum_edit.textChanged.connect(self.search)
-        self.open_btn.clicked.connect(self.open_selected)
-        self.delete_btn.clicked.connect(self.delete_selected)
-        self.payed_filter.currentIndexChanged.connect(self.search)
-
-        # اولین بار همه را نمایش بده
-        self.search()
-
-    def search(self):
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-
-        name = self.name_edit.text().strip()
-        ncode = self.ncode_edit.text().strip()
-        dealnum = self.dealnum_edit.text().strip()
-        payed_value = self.payed_filter.currentData()
-
-        query = """
-            SELECT buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed, deal_json
-            FROM contracts
-            WHERE 1=1
-        """
-        params = []
-
-        if name:
-            query += " AND (buyer_json LIKE ? OR seller_json LIKE ?)"
-            params.append(f"%{name}%")
-            params.append(f"%{name}%")
-
-        if ncode:
-            query += " AND buyer_id LIKE ?"
-            params.append(f"%{ncode}%")
-
-        if dealnum:
-            query += " AND contract_number LIKE ?"
-            params.append(f"%{dealnum}%")
-
-        if payed_value is not None:
-            query += " AND is_payed = ?"
-            params.append(payed_value)
-
-        cur.execute(query, params)
-        rows = cur.fetchall()
-        conn.close()
-
-        self.table.blockSignals(True)
-        self.table.setRowCount(len(rows))
-
-        for row_idx, (buyer_json, seller_json, buyer_id, contract_number, file_path, is_payed, deal_json) in enumerate(rows):
-
-            buyer = json.loads(buyer_json)
-            seller = json.loads(seller_json)
-            deal_info = json.loads(deal_json)
-
-            is_old = "is_payed" not in deal_info  # ← تشخیص قرارداد قدیمی
-
-            buyer_name = f"{buyer['name']} {buyer['lname']}"
-            seller_name = f"{seller['name']} {seller['lname']}"
-
-            self.table.setItem(row_idx, 0, QTableWidgetItem(buyer_name))
-            self.table.setItem(row_idx, 1, QTableWidgetItem(seller_name))
-            self.table.setItem(row_idx, 2, QTableWidgetItem(str(contract_number)))
-
-            checkbox = QTableWidgetItem()
-
-            if is_old:
-                checkbox.setFlags(Qt.NoItemFlags)  # ← غیرفعال
-                checkbox.setCheckState(Qt.Checked)  # ← همیشه پرداخت شده
-                row_color = QColor(200, 255, 200)
-            else:
-                checkbox.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-                checkbox.setCheckState(Qt.Checked if is_payed == 1 else Qt.Unchecked)
-                row_color = QColor(200, 255, 200) if is_payed == 1 else QColor(255, 200, 200)
-
-            self.table.setItem(row_idx, 3, checkbox)
-
-            for col in range(4):
-                self.table.item(row_idx, col).setBackground(row_color)
-
-        self.table.blockSignals(False)
-    
-    def open_selected(self):
-        row = self.table.currentRow()
-        if row < 0:
-            return
-
-        # ستون مسیر فایل دیگر در جدول نیست → باید دوباره از دیتابیس بخوانیم
-        contract_number = self.table.item(row, 2).text()
-
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT file_path FROM contracts WHERE contract_number = ?", (contract_number,))
-        result = cur.fetchone()
-        conn.close()
-
-        if result:
-            file_path = result[0]
-            if file_path:
-                QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
-
-    def delete_selected(self):
-        row = self.table.currentRow()
-        if row < 0:
-            QMessageBox.warning(self, "خطا", "لطفاً یک ردیف را انتخاب کنید.")
-            return
-
-        contract_number = self.table.item(row, 2).text()
-
-        confirm = QMessageBox.question(
-            self,
-            "تأیید حذف",
-            f"آیا از حذف قرارداد شماره {contract_number} مطمئن هستید؟",
-            QMessageBox.Yes | QMessageBox.No
-        )
-
-        if confirm != QMessageBox.Yes:
-            return
-
-        try:
-            with sqlite3.connect("settings.db") as conn:
-                cur = conn.cursor()
-                cur.execute("DELETE FROM contracts WHERE contract_number=?", (contract_number,))
-                conn.commit()
-
-            QMessageBox.information(self, "حذف شد", "قرارداد با موفقیت حذف شد.")
-
-            self.search()  # رفرش جدول
-
-        except Exception as e:
-            QMessageBox.critical(self, "خطا", f"در حذف قرارداد مشکلی رخ داد:\n{str(e)}")
-
-    def on_item_changed(self, item):
-        if item.column() != 3:
-            return
-
-        row = item.row()
-        contract_number = self.table.item(row, 2).text()
-
-        # --- تشخیص قرارداد قدیمی ---
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT deal_json FROM contracts WHERE contract_number=?", (contract_number,))
-        deal_json = cur.fetchone()[0]
-        deal_info = json.loads(deal_json)
-
-        # قرارداد قدیمی → اجازه تغییر نده
-        if "is_payed" not in deal_info:
-            conn.close()
-            self.table.blockSignals(True)
-            item.setCheckState(Qt.Checked)
-            self.table.blockSignals(False)
-            return
-
-        # --- قرارداد جدید ---
-        new_value = 1 if item.checkState() == Qt.Checked else 0
-
-        # هم ستون is_payed و هم deal_json را آپدیت کن
-        deal_info["is_payed"] = new_value
-        new_deal_json = json.dumps(deal_info, ensure_ascii=False)
-
-        cur.execute(
-            "UPDATE contracts SET is_payed = ?, deal_json = ? WHERE contract_number = ?",
-            (new_value, new_deal_json, contract_number)
-        )
-        conn.commit()
-        conn.close()
-
-        # Word را با مقدار جدید is_payed بساز
-        self.update_contract_word(contract_number)
-
-        from PySide6.QtGui import QColor
-        color = QColor(200, 255, 200) if new_value == 1 else QColor(255, 200, 200)
-
-        for col in range(4):
-            self.table.item(row, col).setBackground(color)
-    
-    def update_contract_word(self, contract_number):
-
-        with self.db.connect() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT seller_json, buyer_json, car_json, deal_json, checkpoint_image, file_path
-                FROM contracts WHERE contract_number = ?
-            """, (contract_number,))
-            row = cur.fetchone()
-
-        if not row:
-            return
-
-        seller_json, buyer_json, car_json, deal_json, checkpoint_path, old_docx_path = row
-
-        data = {
-            "seller": json.loads(seller_json),
-            "buyer": json.loads(buyer_json),
-            "car_deal": json.loads(car_json),
-            "deal_info": json.loads(deal_json)
-        }
-
-        # --- قرارداد قدیمی → Word را نساز ---
-        if "is_payed" not in data["deal_info"]:
-            return
-
-        temp_json = os.path.join(os.getcwd(), "temp", f"contract_{contract_number}.json")
-        os.makedirs(os.path.dirname(temp_json), exist_ok=True)
-
-        with open(temp_json, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        generator = ContractGenerator()
-        save_dir = os.path.dirname(old_docx_path)
-
-        new_docx = generator.generate(
-            json_path=temp_json,
-            checkpoint_image_path=checkpoint_path,
-            output_dir=save_dir
-        )
-
-        with self.db.connect() as conn:
-            cur = conn.cursor()
-            cur.execute("UPDATE contracts SET file_path = ? WHERE contract_number = ?", (new_docx, contract_number))
-            conn.commit()
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = SearchApp()
-    w.show()
-    sys.exit(app.exec())
 
 
 class App(QMainWindow):
@@ -372,6 +38,9 @@ class App(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self.sync_service = SyncService()
+        self.initialize_sync()
+
         self.ui.deal_time.setDisplayFormat("HH:mm")
 
         self.ui.is_payed.clear()
@@ -379,9 +48,13 @@ class App(QMainWindow):
         self.ui.is_payed.addItem("پرداخت شده", 1)
         self.ui.is_payed.addItem("پرداخت نشده", 0)
 
-        self.is_exchange = False       
-        self.car1_data = None          
-        self.car2_data = None          
+        self.ui.price_info.clear()
+        self.ui.price_info.addItem("انتخاب کنید", None)
+        self.ui.price_info.addItem("تمام نقدی", 1)
+        self.ui.price_info.addItem("تمام چک", 2)
+        self.ui.price_info.addItem("نقدی و چک ", 3)
+
+        self.MAX_CHARS = 180     
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_datetime_fields)
@@ -396,6 +69,7 @@ class App(QMainWindow):
         self.ui.update_db.clicked.connect(self.on_update_db_clicked)
         self.setup_contract_number()
         self.fill_pelak_alpha()
+        self.setup_description_counter()
 
 
         logging.basicConfig(
@@ -426,40 +100,6 @@ class App(QMainWindow):
         layout.addWidget(self.logo_label)
         
         self.load_logo("./assets/images/logo.png") 
-
-    def on_update_db_clicked(self):
-        try:
-            conn = sqlite3.connect("settings.db")
-            cur = conn.cursor()
-
-            # بررسی وجود ستون
-            cur.execute("PRAGMA table_info(contracts)")
-            columns = [col[1] for col in cur.fetchall()]
-
-            if "is_payed" not in columns:
-                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT 1")
-                conn.commit()
-
-                QMessageBox.information(
-                    self,
-                    "بروزرسانی انجام شد",
-                    "دیتابیس با موفقیت بروزرسانی شد"
-                )
-            else:
-                QMessageBox.information(
-                    self,
-                    "بروزرسانی انجام شد",
-                    "تنظیمات از قبل وجود دارد"
-                )
-
-            conn.close()
-
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                "خطا",
-                f"در بروزرسانی دیتابیس مشکلی رخ داد:\n{str(e)}"
-            )
 
     def fill_pelak_alpha(self):
         letters = ['ب', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی']
@@ -517,13 +157,13 @@ class App(QMainWindow):
             
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(
-                    76, 76,
+                    50, 50,
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation
                 )
                 self.logo_label.setPixmap(scaled_pixmap)
                 self.logo_label.setText("")
-                self.logo_label.setFixedSize(76, 76)
+                self.logo_label.setFixedSize(50, 50)
                 self.logo_label.setScaledContents(True)
             else:
                 self.logo_label.setText("خطا در بارگذاری لوگو")
@@ -609,80 +249,6 @@ class App(QMainWindow):
             final_img = dialog.get_final_image()
             final_img.save("checkpoint_final.png")
  
-    def clear_all_fields(self):
-        # پاک کردن تمام QLineEdit ها
-        for widget in self.findChildren(QLineEdit):
-            widget.clear()
-
-        # ریست پلاک
-        self.ui.pelak_alpha.setCurrentIndex(0)
-
-        # حذف عکس کارشناسی اگر وجود دارد
-        if hasattr(self, "checkpoint_image_path"):
-            del self.checkpoint_image_path
-
-    def get_data(self):
-
-        RLM = "\u200F"
-        LRM = "\u200E"
-
-        pelak_full = (
-            f"{LRM}{self.ui.pelak_two.text()}{RLM}"
-            f"{self.ui.pelak_alpha.currentText()}{RLM}"
-            f"{LRM}{self.ui.pelak_three.text()}{RLM}ایران{LRM}{self.ui.pelak_iran.text()}"
-        )
-                
-        data = {
-            "seller": {
-                "name": self.ui.seller_name.text(),
-                "lname": self.ui.seller_lname.text(),
-                "father": self.ui.seller_father.text(),
-                "birth": self.ui.seller_birth.text(),
-                "national_code": self.ui.seller_ncode.text(),
-                "national_shcode": self.ui.seller_shcode.text(),
-                "from": self.ui.seller_from.text(),
-                "phone": self.ui.seller_phone.text(),
-                "adress": self.ui.seller_adress.text()
-            },
-            "buyer": {
-                "name": self.ui.buyer_name.text(),
-                "lname": self.ui.buyer_lname.text(),
-                "father": self.ui.buyer_father.text(),
-                "birth": self.ui.buyer_birth.text(),
-                "national_code": self.ui.buyer_ncode.text(),
-                "national_shcode": self.ui.buyer_shcode.text(),
-                "from": self.ui.buyer_from.text(),
-                "phone": self.ui.buyer_phone.text(),
-                "address": self.ui.buyer_adress.text()
-            },
-            "car_deal": {
-                "type": self.ui.car_type.text(),
-                "color": self.ui.car_color.text(),
-                "system": self.ui.car_system.text(),
-                "model": self.ui.car_model.text(),
-                "body_id": self.ui.car_body_id.text(),
-                "motor_id": self.ui.car_motor_id.text(),
-                "kilometer": self.ui.car_kilometer.text(),
-                "pelak": pelak_full,
-                "car_info": self.ui.car_info.text()
-            },
-            "deal_info": {
-                "deal_date": "",
-                "deal_time": self.ui.deal_time.text(),
-                "day_respite": self.ui.day_respite.text(),
-                "price_rial": self.ui.price_rial.text(),
-                "price_toman": self.ui.price_toman.text(),
-                "price_info": self.ui.price_info.text(),
-                "is_payed": self.ui.is_payed.currentData()
-            }
-        }
-
-        # نام کامل
-        data["seller"]["fname"] = f"{data['seller']['name']} {data['seller']['lname']}"
-        data["buyer"]["fname"] = f"{data['buyer']['name']} {data['buyer']['lname']}"
-
-        return data
-
     def validate_person_fields(self, buyer, seller):
         errors = []
 
@@ -703,7 +269,95 @@ class App(QMainWindow):
             errors.append("کد ملی خریدار نباید خالی باشد")
 
         return errors
+        
+    def setup_description_counter(self):
+        self.ui.description_text.textChanged.connect(self.update_description_counter)
+        self.update_description_counter()
 
+    def update_description_counter(self):
+        text = self.ui.description_text.toPlainText()
+
+        # جلوگیری از تایپ یا پیست بیشتر از حد مجاز
+        if len(text) > self.MAX_CHARS:
+            limited = text[:self.MAX_CHARS]
+
+            self.ui.description_text.blockSignals(True)
+            self.ui.description_text.setPlainText(limited)
+            self.ui.description_text.blockSignals(False)
+
+            # برگرداندن کرسر به آخر متن
+            cursor = self.ui.description_text.textCursor()
+            cursor.movePosition(QTextCursor.End)
+            self.ui.description_text.setTextCursor(cursor)
+
+            text = limited
+
+        # نمایش شمارنده
+        self.ui.character_counter.setText(f"{len(text)} / {self.MAX_CHARS}")
+
+    def get_data(self):
+
+            RLM = "\u200F"
+            LRM = "\u200E"
+
+            pelak_full = (
+                f"{LRM}{self.ui.pelak_two.text()}{RLM}"
+                f"{self.ui.pelak_alpha.currentText()}{RLM}"
+                f"{LRM}{self.ui.pelak_three.text()}{RLM}ایران{LRM}{self.ui.pelak_iran.text()}"
+            )
+                    
+            data = {
+                "seller": {
+                    "name": self.ui.seller_name.text(),
+                    "lname": self.ui.seller_lname.text(),
+                    "father": self.ui.seller_father.text(),
+                    "birth": self.ui.seller_birth.text(),
+                    "national_code": self.ui.seller_ncode.text(),
+                    "national_shcode": self.ui.seller_shcode.text(),
+                    "from": self.ui.seller_from.text(),
+                    "phone": self.ui.seller_phone.text(),
+                    "adress": self.ui.seller_adress.text()
+                },
+                "buyer": {
+                    "name": self.ui.buyer_name.text(),
+                    "lname": self.ui.buyer_lname.text(),
+                    "father": self.ui.buyer_father.text(),
+                    "birth": self.ui.buyer_birth.text(),
+                    "national_code": self.ui.buyer_ncode.text(),
+                    "national_shcode": self.ui.buyer_shcode.text(),
+                    "from": self.ui.buyer_from.text(),
+                    "phone": self.ui.buyer_phone.text(),
+                    "address": self.ui.buyer_adress.text()
+                },
+                "car_deal": {
+                    "type": self.ui.car_type.text(),
+                    "color": self.ui.car_color.text(),
+                    "system": self.ui.car_system.text(),
+                    "model": self.ui.car_model.text(),
+                    "body_id": self.ui.car_body_id.text(),
+                    "motor_id": self.ui.car_motor_id.text(),
+                    "kilometer": self.ui.car_kilometer.text(),
+                    "pelak": pelak_full,
+                    "car_info": self.ui.car_info.text()
+                },
+                "deal_info": {
+                    "deal_date": "",
+                    "deal_time": self.ui.deal_time.text(),
+                    "day_respite": self.ui.day_respite.text(),
+                    "price_rial": self.ui.price_rial.text(),
+                    "price_toman": self.ui.price_toman.text(),
+                    "price_info": self.ui.price_info.currentText(),
+                    "is_payed": self.ui.is_payed.currentData(),
+                    "description_text": self.ui.description_text.toPlainText()
+                }
+            }
+
+            # نام کامل
+            data["seller"]["fname"] = f"{data['seller']['name']} {data['seller']['lname']}"
+            data["buyer"]["fname"] = f"{data['buyer']['name']} {data['buyer']['lname']}"
+
+            return data
+    
     def on_archive_btn_clicked(self):
 
         try:
@@ -743,6 +397,10 @@ class App(QMainWindow):
             if data["deal_info"]["is_payed"] is None:
                 QMessageBox.warning(self, "خطا", "لطفاً وضعیت پرداخت را انتخاب کنید.")
                 return
+            
+            if data["deal_info"]["price_info"] is None:
+                QMessageBox.warning(self, "خطا", "لطفاً نوع پرداخت (نقدی/چک) را انتخاب کنید.")
+                return
 
             # ۵) ساخت Word
             save_dir = self.db.get_save_path()
@@ -775,8 +433,10 @@ class App(QMainWindow):
                         car_json,
                         deal_json,
                         checkpoint_image,
-                        is_payed
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        is_payed,
+                        price_info,
+                        description_text
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         data["buyer"]["national_code"],
@@ -789,20 +449,100 @@ class App(QMainWindow):
                         car_json,
                         deal_json,
                         checkpoint_path,
-                        data["deal_info"]["is_payed"]
+                        data["deal_info"]["is_payed"],
+                        data["deal_info"]["price_info"],
+                        data["deal_info"]["description_text"],
                     ),
                 )
                 conn.commit()
 
             self.setup_contract_number()
             QMessageBox.information(self, "بایگانی موفق", "قرارداد با موفقیت بایگانی شد.")
+            self.sync_service.upload_new_contract(contract_number)
 
 
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}")
-          
+
+    def initialize_sync(self):
+        def ask_contracts_root():
+            return QFileDialog.getExistingDirectory(self, "انتخاب پوشه قراردادها")
+
+        # بار اول: آپلود همهٔ قراردادهای موجود
+        self.sync_service.initial_upload_existing_contracts(ask_contracts_root)
+
+        # فعال‌سازی سینک پس‌زمینه
+        self.sync_service.start_background_sync(interval_seconds=300)  
+
     def open_search_window(self):
         self.search_window = SearchApp(self.db)
         self.search_window.show()
 
-        
+    def on_update_db_clicked(self):
+        try:
+            conn = sqlite3.connect("settings.db")
+            cur = conn.cursor()
+
+            # گرفتن ستون‌های جدول
+            cur.execute("PRAGMA table_info(contracts)")
+            columns = [col[1] for col in cur.fetchall()]
+
+            updated = False
+
+            # ستون is_payed
+            if "is_payed" not in columns:
+                # اضافه کردن ستون با مقدار پیش‌فرض NULL
+                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT NULL")
+                updated = True
+            else:
+                # اگر قبلاً اشتباهی DEFAULT 1 بوده → اصلاحش کنیم
+                # قراردادهای قدیمی را NULL کنیم
+                cur.execute("""
+                    UPDATE contracts
+                    SET is_payed = NULL
+                    WHERE is_payed = 1
+                    AND price_info IS NULL
+                    AND description_text IS NULL
+                """)
+                updated = True
+
+            # ستون price_info
+            if "price_info" not in columns:
+                cur.execute("ALTER TABLE contracts ADD COLUMN price_info INTEGER")
+                updated = True
+
+            # ستون description_text
+            if "description_text" not in columns:
+                cur.execute("ALTER TABLE contracts ADD COLUMN description_text TEXT")
+                updated = True
+
+            conn.commit()
+            conn.close()
+
+            if updated:
+                QMessageBox.information(
+                    self,
+                    "بروزرسانی انجام شد",
+                    "دیتابیس با موفقیت بروزرسانی شد و ستون‌های جدید اضافه یا اصلاح شدند."
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "بروزرسانی انجام شد",
+                    "دیتابیس از قبل بروز بوده و نیازی به تغییر نبود."
+                )
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "خطا",
+                f"در بروزرسانی دیتابیس مشکلی رخ داد:\n{str(e)}"
+            )
+
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = App()
+    w.show()
+    sys.exit(app.exec())
