@@ -676,7 +676,7 @@ class Ui_MainWindow(object):
         self.checkpoint_img_btn.setIcon(icon6)
         self.footer_frame = QFrame(self.main_frame)
         self.footer_frame.setObjectName(u"footer_frame")
-        self.footer_frame.setGeometry(QRect(5, 455, 1090, 71))
+        self.footer_frame.setGeometry(QRect(5, 445, 1090, 81))
         self.footer_frame.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.footer_frame.setAutoFillBackground(False)
         self.footer_frame.setStyleSheet(u"background-color: rgb(0, 0, 0);")

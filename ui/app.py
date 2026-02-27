@@ -10,7 +10,7 @@ from word import ContractGenerator
 from ui import Ui_MainWindow
 from ui.sync_service import SyncService
 from ui.sync_service import SyncService
-from .search_app import SearchApp
+from .search_window import SearchApp
 
 
 def resource_path(relative_path):
@@ -45,8 +45,8 @@ class App(QMainWindow):
 
         self.ui.is_payed.clear()
         self.ui.is_payed.addItem("انتخاب کنید", None)
-        self.ui.is_payed.addItem("پرداخت شده", 1)
-        self.ui.is_payed.addItem("پرداخت نشده", 0)
+        self.ui.is_payed.addItem("پرداخت شد", 1)
+        self.ui.is_payed.addItem("پرداخت نشد", 0)
 
         self.ui.price_info.clear()
         self.ui.price_info.addItem("انتخاب کنید", None)
@@ -54,7 +54,7 @@ class App(QMainWindow):
         self.ui.price_info.addItem("تمام چک", 2)
         self.ui.price_info.addItem("نقدی و چک ", 3)
 
-        self.MAX_CHARS = 180     
+        self.MAX_CHARS = 350     
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_datetime_fields)
@@ -475,8 +475,11 @@ class App(QMainWindow):
         self.sync_service.start_background_sync(interval_seconds=300)  
 
     def open_search_window(self):
-        self.search_window = SearchApp(self.db)
+        if not hasattr(self, "search_window"):
+            self.search_window = SearchApp(self.db)
+
         self.search_window.show()
+        self.search_window.search()  # رفرش سریع
 
     def on_update_db_clicked(self):
         try:

@@ -75,20 +75,8 @@ class ContractGenerator:
                     continue
 
                 if "paid_stamp" in text:
-                    rng.Text = ""
-
-                    # فقط اگر پرداخت شده باشد
-                    print("IS PAYED VALUE:", flat.get("is_payed"))
-                    if flat.get("is_payed") in [1, "1", True]:
-                        stamp_path = os.path.abspath(resource_path("./assets/true.png"))
-                        if os.path.exists(stamp_path):
-                            shape.Fill.Visible = True
-                            shape.Fill.UserPicture(stamp_path)
-                            shape.Fill.Transparency = 0
-                            shape.Fill.TextureTile = False
-                            shape.LockAspectRatio = False
-
-                    # چه پرداخت شده باشد چه نه، دیگر متن placeholder را نمی‌خواهیم
+                    status = "پرداخت شد" if flat.get("is_payed") in [1, "1", True] else "پرداخت نشد"
+                    rng.Text = status
                     continue
 
                 # --- جایگزینی متن‌ها ---

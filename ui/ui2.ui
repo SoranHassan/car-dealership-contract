@@ -2172,9 +2172,9 @@ border-radius: 5px;</string>
      <property name="geometry">
       <rect>
        <x>5</x>
-       <y>455</y>
+       <y>445</y>
        <width>1090</width>
-       <height>71</height>
+       <height>81</height>
       </rect>
      </property>
      <property name="layoutDirection">
