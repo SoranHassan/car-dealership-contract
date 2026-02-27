@@ -8,8 +8,6 @@ from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
 from word import ContractGenerator  
 from ui import Ui_MainWindow
-from ui.sync_service import SyncService
-from ui.sync_service import SyncService
 from .search_window import SearchApp
 
 
@@ -37,9 +35,6 @@ class App(QMainWindow):
         self.check_first_run()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
-        self.sync_service = SyncService()
-        self.initialize_sync()
 
         self.ui.deal_time.setDisplayFormat("HH:mm")
 
@@ -458,7 +453,7 @@ class App(QMainWindow):
 
             self.setup_contract_number()
             QMessageBox.information(self, "بایگانی موفق", "قرارداد با موفقیت بایگانی شد.")
-            self.sync_service.upload_new_contract(contract_number)
+
 
 
         except Exception as e:
