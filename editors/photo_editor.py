@@ -126,8 +126,8 @@ class PhotoEditorDialog(QDialog):
         self.viewer = SimpleImageViewer(self)
         layout.addWidget(self.viewer)
 
-        self.crop_w = int(3.88 * 96)
-        self.crop_h = int(3.32 * 96)
+        self.crop_w = int(4.02 * 96)
+        self.crop_h = int(2.83 * 96)
 
         self.crop_frame = CropFrame(self.crop_w, self.crop_h, self)
         self.crop_frame.raise_()
