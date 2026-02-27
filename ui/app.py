@@ -464,16 +464,6 @@ class App(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"در فرآیند بایگانی خطایی رخ داد:\n{str(e)}")
 
-    def initialize_sync(self):
-        def ask_contracts_root():
-            return QFileDialog.getExistingDirectory(self, "انتخاب پوشه قراردادها")
-
-        # بار اول: آپلود همهٔ قراردادهای موجود
-        self.sync_service.initial_upload_existing_contracts(ask_contracts_root)
-
-        # فعال‌سازی سینک پس‌زمینه
-        self.sync_service.start_background_sync(interval_seconds=300)  
-
     def open_search_window(self):
         if not hasattr(self, "search_window"):
             self.search_window = SearchApp(self.db)
