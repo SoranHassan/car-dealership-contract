@@ -71,7 +71,7 @@
     </property>
     <property name="styleSheet">
      <string notr="true">background-color: #1B3C53;
-border-radius: 8px;</string>
+border-radius: 5px;</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -90,7 +90,7 @@ border-radius: 8px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #234C6A; 
-border-radius: 10px;
+border-radius: 5px;
 </string>
      </property>
      <property name="frameShape">
@@ -145,35 +145,12 @@ border-radius: 10px;
        <string>اتــــــــــو گــــــــــــریده</string>
       </property>
      </widget>
-     <widget class="QLabel" name="today">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>3</y>
-        <width>211</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Pelak</family>
-        <pointsize>12</pointsize>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">color: rgb(255, 255, 255);</string>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
      <widget class="QPushButton" name="save_dir_btn">
       <property name="geometry">
        <rect>
         <x>5</x>
         <y>5</y>
-        <width>61</width>
+        <width>26</width>
         <height>26</height>
        </rect>
       </property>
@@ -189,7 +166,7 @@ border-radius: 10px;
 border-radius: 5px;</string>
       </property>
       <property name="text">
-       <string>مسیر ذخیره</string>
+       <string/>
       </property>
       <property name="icon">
        <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
@@ -198,7 +175,7 @@ border-radius: 5px;</string>
      <widget class="QPushButton" name="update_db">
       <property name="geometry">
        <rect>
-        <x>69</x>
+        <x>35</x>
         <y>5</y>
         <width>26</width>
         <height>26</height>
@@ -220,14 +197,14 @@ border-radius: 5px;</string>
      <property name="geometry">
       <rect>
        <x>5</x>
-       <y>124</y>
+       <y>100</y>
        <width>266</width>
-       <height>231</height>
+       <height>256</height>
       </rect>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -526,7 +503,7 @@ border-radius: 5px;</string>
        <enum>Qt::LayoutDirection::RightToLeft</enum>
       </property>
       <property name="autoFillBackground">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(255, 255, 255);
@@ -537,6 +514,51 @@ border-radius: 5px;</string>
       </property>
       <property name="editable">
        <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_41">
+      <property name="geometry">
+       <rect>
+        <x>160</x>
+        <y>220</y>
+        <width>101</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>IRANSansDN</family>
+        <pointsize>12</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);</string>
+      </property>
+      <property name="text">
+       <string>نحوه پرداخت :</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="price_info">
+      <property name="geometry">
+       <rect>
+        <x>5</x>
+        <y>220</y>
+        <width>151</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LayoutDirection::RightToLeft</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);
+border-radius: 5px;</string>
       </property>
      </widget>
     </widget>
@@ -551,7 +573,7 @@ border-radius: 5px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -998,7 +1020,7 @@ border-radius: 5px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1396,7 +1418,7 @@ border-radius: 5px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1785,13 +1807,13 @@ border-radius: 5px;</string>
       <rect>
        <x>5</x>
        <y>45</y>
-       <width>76</width>
-       <height>76</height>
+       <width>50</width>
+       <height>50</height>
       </rect>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(255, 255, 255);
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1803,10 +1825,10 @@ border-radius: 10px;</string>
     <widget class="QFrame" name="frame_2">
      <property name="geometry">
       <rect>
-       <x>404</x>
-       <y>361</y>
-       <width>691</width>
-       <height>40</height>
+       <x>394</x>
+       <y>360</y>
+       <width>701</width>
+       <height>83</height>
       </rect>
      </property>
      <property name="autoFillBackground">
@@ -1814,7 +1836,8 @@ border-radius: 10px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5
+px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1822,13 +1845,13 @@ border-radius: 10px;</string>
      <property name="frameShadow">
       <enum>QFrame::Shadow::Raised</enum>
      </property>
-     <widget class="QLabel" name="label_41">
+     <widget class="QLabel" name="label_2">
       <property name="geometry">
        <rect>
-        <x>580</x>
-        <y>10</y>
+        <x>594</x>
+        <y>-7</y>
         <width>101</width>
-        <height>20</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="font">
@@ -1842,16 +1865,16 @@ border-radius: 10px;</string>
        <string notr="true">color: rgb(255, 255, 255);</string>
       </property>
       <property name="text">
-       <string>نحوه پرداخت :</string>
+       <string>توضیحات پرداخت: </string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="price_info">
+     <widget class="QTextEdit" name="description_text">
       <property name="geometry">
        <rect>
         <x>5</x>
-        <y>10</y>
-        <width>591</width>
-        <height>22</height>
+        <y>19</y>
+        <width>691</width>
+        <height>61</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -1859,19 +1882,42 @@ border-radius: 10px;</string>
 border-radius: 5px;</string>
       </property>
      </widget>
+     <widget class="QLabel" name="character_counter">
+      <property name="geometry">
+       <rect>
+        <x>5</x>
+        <y>0</y>
+        <width>51</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Arial</family>
+        <pointsize>7</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(246, 48, 73);</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
     </widget>
     <widget class="QFrame" name="frame_7">
      <property name="geometry">
       <rect>
-       <x>85</x>
+       <x>60</x>
        <y>45</y>
-       <width>186</width>
-       <height>76</height>
+       <width>211</width>
+       <height>51</height>
       </rect>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1882,10 +1928,10 @@ border-radius: 10px;</string>
      <widget class="QFrame" name="frame_8">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>84</x>
         <y>5</y>
-        <width>161</width>
-        <height>30</height>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -1900,16 +1946,16 @@ border-radius: 10px;</string>
       <widget class="QLabel" name="label_42">
        <property name="geometry">
         <rect>
-         <x>18</x>
+         <x>10</x>
          <y>0</y>
-         <width>101</width>
-         <height>31</height>
+         <width>91</width>
+         <height>41</height>
         </rect>
        </property>
        <property name="font">
         <font>
          <family>Pelak</family>
-         <pointsize>12</pointsize>
+         <pointsize>10</pointsize>
          <bold>true</bold>
         </font>
        </property>
@@ -1924,10 +1970,10 @@ border-radius: 10px;</string>
      <widget class="QLabel" name="deal_num">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>40</y>
-        <width>161</width>
-        <height>31</height>
+        <x>5</x>
+        <y>5</y>
+        <width>71</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="font">
@@ -1973,7 +2019,7 @@ border-radius: 5px;</string>
       <rect>
        <x>5</x>
        <y>360</y>
-       <width>187</width>
+       <width>191</width>
        <height>40</height>
       </rect>
      </property>
@@ -1982,7 +2028,7 @@ border-radius: 5px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1995,7 +2041,7 @@ border-radius: 10px;</string>
        <rect>
         <x>5</x>
         <y>7</y>
-        <width>91</width>
+        <width>97</width>
         <height>26</height>
        </rect>
       </property>
@@ -2021,9 +2067,9 @@ border-radius: 5px;</string>
      <widget class="QPushButton" name="search_btn">
       <property name="geometry">
        <rect>
-        <x>100</x>
+        <x>107</x>
         <y>7</y>
-        <width>81</width>
+        <width>80</width>
         <height>26</height>
        </rect>
       </property>
@@ -2035,7 +2081,7 @@ border-radius: 5px;</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: #10B981;
+       <string notr="true">background-color: #FFF19B;
 border-radius: 5px;</string>
       </property>
       <property name="text">
@@ -2060,7 +2106,7 @@ border-radius: 5px;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: #456882;
-border-radius: 10px;</string>
+border-radius: 5px;</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -2084,7 +2130,7 @@ border-radius: 10px;</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: #3B82F6;
+       <string notr="true">background-color: #6CA651;
 border-radius: 5px;</string>
       </property>
       <property name="text">
@@ -2111,7 +2157,7 @@ border-radius: 5px;</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: #10B981;
+       <string notr="true">background-color: #FF9B51;
 border-radius: 5px;</string>
       </property>
       <property name="text">
@@ -2126,16 +2172,16 @@ border-radius: 5px;</string>
      <property name="geometry">
       <rect>
        <x>5</x>
-       <y>405</y>
+       <y>455</y>
        <width>1090</width>
-       <height>121</height>
+       <height>71</height>
       </rect>
      </property>
      <property name="layoutDirection">
       <enum>Qt::LayoutDirection::RightToLeft</enum>
      </property>
      <property name="autoFillBackground">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(0, 0, 0);</string>
@@ -2235,6 +2281,56 @@ border-radius: 5px;</string>
       </property>
      </widget>
     </widget>
+    <widget class="QFrame" name="frame_11">
+     <property name="geometry">
+      <rect>
+       <x>5</x>
+       <y>403</y>
+       <width>386</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: #456882;
+border-radius: 5px;</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Raised</enum>
+     </property>
+     <widget class="QLabel" name="today">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>5</y>
+        <width>361</width>
+        <height>30</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Pelak</family>
+        <pointsize>12</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LayoutDirection::LeftToRight</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 255, 255);
+text-align: center;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </widget>
     <zorder>frame_9</zorder>
     <zorder>header_frame</zorder>
     <zorder>deal_frame</zorder>
@@ -2248,6 +2344,7 @@ border-radius: 5px;</string>
     <zorder>frame_10</zorder>
     <zorder>footer_frame</zorder>
     <zorder>author_frame</zorder>
+    <zorder>frame_11</zorder>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -2262,6 +2359,52 @@ border-radius: 5px;</string>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <tabstops>
+  <tabstop>seller_name</tabstop>
+  <tabstop>seller_lname</tabstop>
+  <tabstop>seller_father</tabstop>
+  <tabstop>seller_ncode</tabstop>
+  <tabstop>seller_shcode</tabstop>
+  <tabstop>seller_from</tabstop>
+  <tabstop>seller_birth</tabstop>
+  <tabstop>seller_phone</tabstop>
+  <tabstop>seller_adress</tabstop>
+  <tabstop>buyer_name</tabstop>
+  <tabstop>buyer_lname</tabstop>
+  <tabstop>buyer_father</tabstop>
+  <tabstop>buyer_ncode</tabstop>
+  <tabstop>buyer_shcode</tabstop>
+  <tabstop>buyer_from</tabstop>
+  <tabstop>buyer_birth</tabstop>
+  <tabstop>buyer_phone</tabstop>
+  <tabstop>buyer_adress</tabstop>
+  <tabstop>car_type</tabstop>
+  <tabstop>car_color</tabstop>
+  <tabstop>car_system</tabstop>
+  <tabstop>car_model</tabstop>
+  <tabstop>car_body_id</tabstop>
+  <tabstop>car_motor_id</tabstop>
+  <tabstop>car_kilometer</tabstop>
+  <tabstop>pelak_two</tabstop>
+  <tabstop>pelak_alpha</tabstop>
+  <tabstop>pelak_three</tabstop>
+  <tabstop>pelak_iran</tabstop>
+  <tabstop>car_info</tabstop>
+  <tabstop>deal_date</tabstop>
+  <tabstop>deal_time</tabstop>
+  <tabstop>day_respite</tabstop>
+  <tabstop>price_rial</tabstop>
+  <tabstop>price_toman</tabstop>
+  <tabstop>is_payed</tabstop>
+  <tabstop>price_info</tabstop>
+  <tabstop>description_text</tabstop>
+  <tabstop>checkpoint_img_btn</tabstop>
+  <tabstop>save_btn</tabstop>
+  <tabstop>search_btn</tabstop>
+  <tabstop>new_deal_btn</tabstop>
+  <tabstop>save_dir_btn</tabstop>
+  <tabstop>update_db</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
