@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtCore import QTimer, Qt, QTime, QThread, Signal
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QLabel, QVBoxLayout, QMainWindow, QLineEdit, QApplication
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QLabel, QVBoxLayout, QMainWindow, QLineEdit, QApplication, QPushButton
 from ui.ui import Ui_MainWindow
 from database.db import DatabaseManager
 from editors.photo_editor import PhotoEditorDialog
@@ -113,7 +113,6 @@ class ArchiveThread(QThread):
 
 
 class App(QMainWindow):
-    
     def __init__(self):
         super().__init__()
         
@@ -180,6 +179,37 @@ class App(QMainWindow):
         
         # بنر و لوگو
         self.setup_banner_and_logo()
+
+# در ui/app.py - تابع __init__
+
+    # دکمه مدیریت (مخفی)
+        if hasattr(self.ui, 'admin_btn'):
+            self.ui.admin_btn.clicked.connect(self.on_admin_clicked)
+        else:
+            # اگر در ui.py نیست، بساز
+            self.admin_btn = QPushButton("🔒")
+            self.admin_btn.setFixedSize(26, 26)
+            self.admin_btn.setStyleSheet("background-color: #6C3483; border-radius: 5px;")
+            self.admin_btn.setToolTip("پنل مدیریت (فقط ادمین)")
+            self.admin_btn.clicked.connect(self.on_admin_clicked)
+            # اضافه کردن کنار update_db
+            self.ui.header_frame.layout().addWidget(self.admin_btn)
+
+    def on_admin_clicked(self):
+        """باز کردن پنل مدیریت"""
+        try:
+            from ui.admin_dialog import AdminDialog
+            from ui.admin_window import AdminWindow
+            
+            dialog = AdminDialog(self)
+            if dialog.exec():
+                # رمز درست است - باز کردن پنجره مدیریت
+                self.admin_window = AdminWindow(DB_PATH, self)
+                self.admin_window.setWindowModality(Qt.ApplicationModal)  # مهم
+                self.admin_window.show()
+                self.admin_window.raise_()  # جلو آوردن پنجره
+        except Exception as e:
+            QMessageBox.critical(self, "خطا", f"خطا: {str(e)}")
 
     def setup_banner_and_logo(self):
         """تنظیم بنر و لوگو"""
@@ -576,7 +606,6 @@ class App(QMainWindow):
             pass
         
         event.accept()
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

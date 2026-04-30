@@ -82,6 +82,14 @@ class Ui_MainWindow(object):
 "border-radius: 5px;")
         icon2 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.SyncSynchronizing))
         self.update_db.setIcon(icon2)
+        # ========== دکمه مدیریت ==========
+        self.admin_btn = QPushButton(self.header_frame)
+        self.admin_btn.setObjectName(u"admin_btn")
+        self.admin_btn.setGeometry(QRect(70, 5, 26, 26))
+        self.admin_btn.setStyleSheet("background-color: #6C3483; border-radius: 5px;")
+        self.admin_btn.setToolTip("پنل مدیریت (فقط ادمین)")
+        self.admin_btn.setText("")
+# =================================
         self.today = QLabel(self.header_frame)
         self.today.setObjectName(u"today")
         self.today.setGeometry(QRect(870, 3, 211, 30))
