@@ -13,7 +13,7 @@ class TestSearchApp:
         """تست جستجو بر اساس نام"""
         import json
         
-        # ذخیره قرارداد تست
+        # ذخیره قرارداد تست با پارامترهای جدید
         seller_json = json.dumps(sample_contract_data["seller"], ensure_ascii=False)
         buyer_json = json.dumps(sample_contract_data["buyer"], ensure_ascii=False)
         car_json = json.dumps(sample_contract_data["car_deal"], ensure_ascii=False)
@@ -28,11 +28,14 @@ class TestSearchApp:
             buyer_json=buyer_json,
             car_json=car_json,
             deal_json=deal_json,
-            checkpoint_image="/test/checkpoint.png"
+            checkpoint_image="/test/checkpoint.png",
+            is_payed=sample_contract_data["deal_info"].get("is_payed", 0),
+            price_info=sample_contract_data["deal_info"].get("price_info", "نقدی"),
+            description_text=sample_contract_data["deal_info"].get("description_text", "")
         )
         
         # جستجو با نام فروشنده
-        with temp_db.connect() as conn:
+        with temp_db.get_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
                 SELECT * FROM contracts 
@@ -60,11 +63,14 @@ class TestSearchApp:
             buyer_json=buyer_json,
             car_json=car_json,
             deal_json=deal_json,
-            checkpoint_image="/test/checkpoint.png"
+            checkpoint_image="/test/checkpoint.png",
+            is_payed=sample_contract_data["deal_info"].get("is_payed", 0),
+            price_info=sample_contract_data["deal_info"].get("price_info", "نقدی"),
+            description_text=sample_contract_data["deal_info"].get("description_text", "")
         )
         
         # جستجو با شماره قرارداد
-        with temp_db.connect() as conn:
+        with temp_db.get_connection() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM contracts WHERE contract_number = ?", (contract_number,))
             result = cur.fetchone()
@@ -90,11 +96,14 @@ class TestSearchApp:
             buyer_json=buyer_json,
             car_json=car_json,
             deal_json=deal_json,
-            checkpoint_image="/test/checkpoint.png"
+            checkpoint_image="/test/checkpoint.png",
+            is_payed=sample_contract_data["deal_info"].get("is_payed", 0),
+            price_info=sample_contract_data["deal_info"].get("price_info", "نقدی"),
+            description_text=sample_contract_data["deal_info"].get("description_text", "")
         )
         
         # جستجو با کد ملی خریدار
-        with temp_db.connect() as conn:
+        with temp_db.get_connection() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM contracts WHERE buyer_id = ?", 
                        (sample_contract_data["buyer"]["national_code"],))
@@ -105,7 +114,7 @@ class TestSearchApp:
     
     def test_search_no_results(self, temp_db):
         """تست جستجو با نتیجه خالی"""
-        with temp_db.connect() as conn:
+        with temp_db.get_connection() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM contracts WHERE buyer_id = ?", ("9999999999",))
             results = cur.fetchall()

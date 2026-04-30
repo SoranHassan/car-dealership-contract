@@ -1,95 +1,49 @@
-# tests/test_generator.py - نسخه اصلاح شده
+# tests/test_generator.py
 import pytest
-import sys
+import os
+import json
 from unittest.mock import patch, MagicMock
 
 
 class TestContractGenerator:
     
-    @pytest.fixture
-    def sample_contract_data(self):
-        return {
-            "seller": {
-                "name": "علی",
-                "lname": "محمدی",
-                "father": "حسین",
-                "birth": "1365/01/01",
-                "national_code": "1234567890",
-                "national_shcode": "12345",
-                "from": "تهران",
-                "phone": "09123456789",
-                "adress": "تهران"
-            },
-            "buyer": {
-                "name": "رضا",
-                "lname": "کریمی",
-                "father": "احمد",
-                "birth": "1370/02/02",
-                "national_code": "0987654321",
-                "national_shcode": "54321",
-                "from": "شیراز",
-                "phone": "09234567890",
-                "address": "شیراز"
-            },
-            "car_deal": {
-                "type": "پراید",
-                "color": "سفید",
-                "system": "دنده‌ای",
-                "model": "۱۳۹۸",
-                "body_id": "ABC123",
-                "motor_id": "XYZ987",
-                "kilometer": "120000",
-                "pelak": "۱۲۳ - ب - ۴۵۶",
-                "car_info": "بدون مشکل"
-            },
-            "deal_info": {
-                "deal_date": "1402/01/15",
-                "deal_time": "14:30",
-                "day_respite": "۷",
-                "price_rial": "۵۰۰٬۰۰۰٬۰۰۰",
-                "price_toman": "۵۰٬۰۰۰٬۰۰۰",
-                "price_info": "نقدی",
-                "deal_num": "10001"
-            }
-        }
-    
     def test_flatten_data(self, sample_contract_data):
-        """تست تبدیل داده تو در تو به تخت"""
         from word.generator import ContractGenerator
         
         generator = ContractGenerator()
-        # جلوگیری از چک کردن Word
-        generator._check_word_installed = lambda: True
-        
         flat = generator.flatten_data(sample_contract_data)
         
-        assert flat["seller_fname"] == f"{sample_contract_data['seller']['name']} {sample_contract_data['seller']['lname']}"
-        assert flat["buyer_ncode"] == sample_contract_data["buyer"]["national_code"]
-        assert flat["car_type"] == sample_contract_data["car_deal"]["type"]
-        assert flat["deal_date"] is not None
+        assert flat["seller_fname"] == "علی محمدی"
+        assert flat["buyer_ncode"] == "0987654321"
+        assert flat["car_type"] == "پراید"
+        assert flat["deal_num"] == "10001"
     
-    def test_flatten_data_all_fields(self, sample_contract_data):
-        """تست وجود همه فیلدهای مورد نیاز"""
+    def test_flatten_data_has_all_fields(self, sample_contract_data):
         from word.generator import ContractGenerator
         
         generator = ContractGenerator()
-        generator._check_word_installed = lambda: True
-        
         flat = generator.flatten_data(sample_contract_data)
         
-        required_fields = [
-            "seller_birth", "seller_fname", "seller_ncode", "seller_father",
-            "buyer_birth", "buyer_fname", "buyer_ncode", "buyer_father",
-            "car_type", "car_color", "car_model", "body_id", "motor_id"
+        required = [
+            "seller_fname", "seller_ncode", "buyer_fname", "buyer_ncode",
+            "car_type", "car_color", "car_model", "body_id", "pelak",
+            "deal_date", "deal_num", "is_payed"
         ]
         
-        for field in required_fields:
-            assert field in flat, f"Missing field: {field}"
+        for field in required:
+            assert field in flat
     
-    @pytest.mark.skip(reason="این تست نیاز به Microsoft Word نصب شده دارد")
-    def test_check_word_installed(self):
-        """تست بررسی نصب Word - Skip در محیط CI"""
+    @pytest.mark.skip(reason="Requires Microsoft Word installed")
+    def test_generate_contract(self, temp_dir, sample_json_file, sample_checkpoint_image):
         from word.generator import ContractGenerator
+        
         generator = ContractGenerator()
-        result = generator._check_word_installed()
-        assert result is True
+        output = generator.generate(
+            json_path=sample_json_file,
+            checkpoint_image_path=sample_checkpoint_image,
+            output_dir=temp_dir
+        )
+        
+        assert output is not None
+        assert os.path.exists(output)
+        assert output.endswith(".docx")

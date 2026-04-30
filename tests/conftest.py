@@ -1,4 +1,4 @@
-# tests/conftest.py - اصلاح شده
+# tests/conftest.py
 import os
 import sys
 import json
@@ -7,6 +7,7 @@ import pytest
 from pathlib import Path
 from datetime import datetime
 
+# اضافه کردن مسیر پروژه
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.db import DatabaseManager
@@ -21,30 +22,22 @@ def temp_db():
     db = DatabaseManager(db_path)
     yield db
     
-    # اصلاح این قسمت - بستن صحیح اتصال
-    try:
-        with db.connect() as conn:
-            conn.close()
-    except Exception:
-        pass
-    
-    # پاک کردن فایل دیتابیس
     try:
         os.unlink(db_path)
-    except Exception:
+    except:
         pass
 
 
 @pytest.fixture
 def temp_dir():
-    """ایجاد پوشه موقت برای تست"""
+    """ایجاد پوشه موقت"""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
 
 
 @pytest.fixture
 def sample_contract_data():
-    """داده‌های نمونه برای قرارداد"""
+    """داده نمونه قرارداد"""
     return {
         "seller": {
             "name": "علی",
@@ -72,7 +65,7 @@ def sample_contract_data():
             "type": "پراید",
             "color": "سفید",
             "system": "دنده‌ای",
-            "model": "۱۳۹۸",
+            "model": "1398",
             "body_id": "ABC123456789",
             "motor_id": "XYZ987654321",
             "kilometer": "120000",
@@ -82,19 +75,12 @@ def sample_contract_data():
         "deal_info": {
             "deal_date": "1402/01/15",
             "deal_time": "14:30",
-            "day_respite": "۷",
-            "price_rial": "۵۰۰٬۰۰۰٬۰۰۰",
-            "price_toman": "۵۰٬۰۰۰٬۰۰۰",
+            "day_respite": "7",
+            "price_rial": "500,000,000",
+            "price_toman": "50,000,000",
             "price_info": "نقدی",
-            "deal_num": "10001"
+            "description_text": "توضیحات تست",
+            "deal_num": "10001",
+            "is_payed": 0
         }
     }
-
-
-@pytest.fixture
-def sample_json_file(temp_dir, sample_contract_data):
-    """ایجاد فایل JSON نمونه برای تست"""
-    json_path = os.path.join(temp_dir, "test_contract.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(sample_contract_data, f, ensure_ascii=False, indent=2)
-    return json_path

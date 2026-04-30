@@ -110,26 +110,21 @@ class SplashScreen(QSplashScreen):
 def main():
     """نقطه ورود اصلی برنامه"""
     
-    # 1. بررسی نسخه پایتون
     if not check_python_version():
         sys.exit(1)
     
-    # 2. ایجاد پوشه‌های مورد نیاز
     create_required_directories()
     
-    # 3. تنظیم لاگ
     logger = setup_logging()
     
-    # 4. ایجاد برنامه Qt
     app = QApplication(sys.argv)
     app.setApplicationName("AutoGarideh")
     app.setOrganizationName("AutoGarideh")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("2.1.0")
     
-    # تنظیم آیکون برنامه
     try:
         from ui.app import resource_path
-        icon_path = resource_path("icon.ico")
+        icon_path = resource_path("icon.jpg")
         if os.path.exists(icon_path):
             app.setWindowIcon(QIcon(icon_path))
     except Exception as e:
