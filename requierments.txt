@@ -1,1 +1,31 @@
-19-ج-<PySide6.QtWidgets.QLineEdit(0x1aba6a7bcc0, name="pelak_three") at 0x000001ABA70A9700> 27
+# requirements.txt
+# AutoGarideh - Vehicle Contract Generator
+
+# GUI Framework
+PySide6>=6.5.0
+
+# Word Document Generation (Windows only)
+pywin32>=306
+
+# Persian Date Utilities
+persiantools>=4.0.0
+
+# HTTP Requests for Sync Service
+requests>=2.31.0
+
+# Database (built-in - no installation needed)
+# sqlite3 is included with Python
+
+# Additional Utilities
+python-dateutil>=2.8.2
+
+# Optional: For better performance
+# apscheduler>=3.10.0
+
+# Optional: For PDF export (if needed later)
+# reportlab>=4.0.0
+
+# Test
+pytest
+pytest-qt 
+pytest-cov

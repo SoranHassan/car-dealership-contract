@@ -1,0 +1,9 @@
+# tests/__init__.py
+"""
+AutoGarideh Test Suite
+=======================
+
+This package contains unit tests for the AutoGarideh application.
+Run all tests with: pytest tests/
+Run specific test: pytest tests/test_database.py
+"""
