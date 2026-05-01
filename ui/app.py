@@ -520,7 +520,7 @@ class App(QMainWindow):
         self.search_window.search_async()
 
     def on_update_db_clicked(self):
-        """بروزرسانی دیتابیس - اضافه کردن ستون‌های جدید"""
+        """بروزرسانی دیتابیس - اضافه کردن ستون‌های جدید و تنظیم پیش‌فرض پرداخت"""
         try:
             import sqlite3
             
@@ -533,15 +533,18 @@ class App(QMainWindow):
             
             added = []
             
-            # اضافه کردن ستون created_at (بدون DEFAULT)
+            # اضافه کردن ستون created_at
             if "created_at" not in columns:
                 cur.execute("ALTER TABLE contracts ADD COLUMN created_at TIMESTAMP")
                 added.append("created_at")
             
-            # اضافه کردن ستون is_payed
+            # اضافه کردن ستون is_payed با مقدار پیش‌فرض 1 (پرداخت شده)
             if "is_payed" not in columns:
-                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT NULL")
+                cur.execute("ALTER TABLE contracts ADD COLUMN is_payed INTEGER DEFAULT 1")
                 added.append("is_payed")
+            else:
+                # اگر ستون وجود دارد ولی مقادیر قدیمی NULL هستند، آنها را به 1 تبدیل کن
+                cur.execute("UPDATE contracts SET is_payed = 1 WHERE is_payed IS NULL")
             
             # اضافه کردن ستون price_info
             if "price_info" not in columns:
@@ -553,14 +556,6 @@ class App(QMainWindow):
                 cur.execute("ALTER TABLE contracts ADD COLUMN description_text TEXT DEFAULT NULL")
                 added.append("description_text")
             
-            # به‌روزرسانی created_at برای رکوردهای قدیمی (با استفاده از date_shamsi)
-            if "created_at" in added:
-                try:
-                    cur.execute("UPDATE contracts SET created_at = datetime('now') WHERE created_at IS NULL")
-                except:
-                    # اگر تاریخ شمسی دارید میتونید از اون استفاده کنید
-                    pass
-            
             conn.commit()
             conn.close()
             
@@ -568,21 +563,27 @@ class App(QMainWindow):
                 QMessageBox.information(
                     self,
                     "بروزرسانی دیتابیس",
-                    f"ستون‌های زیر با موفقیت اضافه شدند:\n{', '.join(added)}\n\nمقدار همه رکوردهای قدیمی NULL است."
+                    f"ستون‌های زیر با موفقیت اضافه شدند:\n{', '.join(added)}\n\n✅ وضعیت کلیه قراردادهای قدیمی به 'پرداخت شده' تغییر کرد."
                 )
             else:
+                # حتی اگر ستون جدید اضافه نشد، باز هم مقادیر NULL را به 1 تبدیل کن
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("UPDATE contracts SET is_payed = 1 WHERE is_payed IS NULL")
+                conn.commit()
+                conn.close()
                 QMessageBox.information(
                     self,
                     "بروزرسانی دیتابیس",
-                    "دیتابیس قبلاً بروز است. هیچ ستون جدیدی اضافه نشد."
+                    "✅ وضعیت کلیه قراردادهای قدیمی به 'پرداخت شده' تغییر کرد."
                 )
             
             # رفرش شماره قرارداد
             self.setup_contract_number()
             
         except Exception as e:
-            QMessageBox.critical(self, "خطا", f"خطا در بروزرسانی دیتابیس:\n{str(e)}")
-      
+            QMessageBox.critical(self, "خطا", f"خطا در بروزرسانی دیتابیس:\n{str(e)}")      
+    
     def closeEvent(self, event):
         """پاک کردن منابع هنگام بستن"""
         # منتظر ماندن برای اتمام thread
