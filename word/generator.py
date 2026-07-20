@@ -1,14 +1,30 @@
 # word/generator.py
-import win32com.client as win32
+#
+# Cross-platform contract generator (Linux + Windows + macOS).
+#
+# The previous implementation drove Microsoft Word through COM automation
+# (pywin32 / win32com), which only works on Windows with Office installed.
+# This version uses python-docx, so it runs anywhere Python does.
+#
+# The template (assets/AG.docx) stores its fields inside Word text boxes.
+# python-docx does not expose text boxes through its high-level API, so we
+# walk the raw OOXML tree (every <w:p> paragraph, including those nested in
+# <w:txbxContent>). Placeholders are often split across several <w:t> runs,
+# so we coalesce each paragraph's runs before replacing.
+
 import os
 import json
 import shutil
 import tempfile
 import logging
-import time
-import threading
-from persiantools.jdatetime import JalaliDate
 import sys
+
+from persiantools.jdatetime import JalaliDate
+
+from docx import Document
+from docx.shared import Cm
+from docx.oxml.ns import qn
+from docx.text.paragraph import Paragraph
 
 logger = logging.getLogger(__name__)
 
@@ -24,45 +40,26 @@ class ContractGeneratorError(Exception):
 
 
 class ContractGenerator:
-    _word_app = None
-    _word_app_lock = threading.Lock()
-    
+    # Width used for the inspection photo inserted into its text box.
+    CHECKPOINT_IMG_WIDTH_CM = 6.5
+
     def __init__(self):
         self.word_template = resource_path("./assets/AG.docx")
         self._check_template_exists()
-
-    @classmethod
-    def get_word_app(cls):
-        with cls._word_app_lock:
-            if cls._word_app is not None:
-                try:
-                    _ = cls._word_app.Visible
-                    return cls._word_app
-                except:
-                    cls._word_app = None
-            
-            try:
-                cls._word_app = win32.Dispatch("Word.Application")
-                cls._word_app.Visible = False
-                cls._word_app.DisplayAlerts = False
-                cls._word_app.ScreenUpdating = False
-                logger.info("Word Application initialized and cached")
-            except Exception as e:
-                raise ContractGeneratorError(f"Microsoft Word not installed: {e}")
-            
-            return cls._word_app
 
     def _check_template_exists(self):
         if not os.path.exists(self.word_template):
             raise ContractGeneratorError(f"Template not found: {self.word_template}")
 
+    # ------------------------------------------------------------------ #
+    # Public API                                                          #
+    # ------------------------------------------------------------------ #
     def generate(self, json_path, checkpoint_image_path, output_dir):
-        doc = None
         temp_dir = None
-        
         try:
+            import time
             start_time = time.time()
-            
+
             with open(json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
@@ -81,99 +78,100 @@ class ContractGenerator:
             temp_dir = tempfile.mkdtemp(prefix="contract_gen_")
             temp_output = os.path.join(temp_dir, "temp_output.docx")
 
-            word = self.get_word_app()
-            doc = word.Documents.Open(os.path.abspath(self.word_template))
-
-            # =========================================================
-            # پردازش Shape ها (حفظ کامل قالب)
-            # =========================================================
-            for shape in doc.Shapes:
-                if not shape.TextFrame.HasText:
-                    continue
-                    
-                rng = shape.TextFrame.TextRange
-                original_text = rng.Text
-                
-                if not original_text:
-                    continue
-
-                new_text = original_text
-                
-                # ۱) عکس کارشناسی (بدون حذف متن اطراف)
-                if "checkpoint_img" in new_text:
-                    if os.path.exists(checkpoint_image_path):
-                        try:
-                            shape.Fill.Visible = True
-                            shape.Fill.UserPicture(checkpoint_image_path)
-                            shape.Fill.Transparency = 0
-                            shape.Fill.TextureTile = False
-                            shape.LockAspectRatio = False
-                        except Exception as img_error:
-                            logger.warning(f"Failed to place image: {img_error}")
-                    # فقط تگ checkpoint_img رو حذف کن
-                    new_text = new_text.replace("checkpoint_img", "")
-                    rng.Text = new_text
-                    continue
-
-                # ۲) مهر پرداخت (جایگزینی)
-                if "paid_stamp" in new_text:
-                    status = "پرداخت شد" if flat.get("is_payed") in [1, "1", True] else "پرداخت نشد"
-                    new_text = new_text.replace("paid_stamp", status)
-                    rng.Text = new_text
-                    continue
-
-                # ۳) جایگزینی سایر متغیرها
-                changed = False
-                for key, value in flat.items():
-                    placeholder = key
-                    if placeholder in new_text:
-                        new_text = new_text.replace(placeholder, str(value))
-                        changed = True
-                
-                if changed:
-                    rng.Text = new_text
-
-            # =========================================================
-            # ذخیره فایل
-            # =========================================================
-            doc.SaveAs(temp_output)
-            doc.Close()
-            
-            time.sleep(0.5)
+            doc = Document(os.path.abspath(self.word_template))
+            self._fill_document(doc, flat, checkpoint_image_path)
+            doc.save(temp_output)
 
             if os.path.exists(final_output):
                 try:
                     os.remove(final_output)
-                except:
+                except OSError:
                     pass
 
             shutil.copy2(temp_output, final_output)
-            
-            try:
-                os.remove(temp_output)
-            except:
-                pass
 
-            logger.info(f"Contract generated in {time.time() - start_time:.2f}s: {final_output}")
+            logger.info(
+                f"Contract generated in {time.time() - start_time:.2f}s: {final_output}"
+            )
             return final_output
 
+        except ContractGeneratorError:
+            raise
         except Exception as e:
             logger.error(f"Error in generate: {e}")
             raise ContractGeneratorError(f"خطا در تولید قرارداد: {str(e)}")
-            
         finally:
-            try:
-                if doc is not None:
-                    doc.Close(SaveChanges=False)
-            except:
-                pass
-            
             try:
                 if temp_dir and os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir)
-            except:
+            except OSError:
                 pass
 
+    # ------------------------------------------------------------------ #
+    # Template filling                                                    #
+    # ------------------------------------------------------------------ #
+    def _fill_document(self, doc, flat, checkpoint_image_path):
+        """Replace every placeholder across the whole document, including
+        paragraphs nested inside text boxes."""
+        # Replace longest keys first so a shorter key can never clobber part
+        # of a longer one (e.g. seller_from vs seller_fname).
+        ordered_keys = sorted(flat.keys(), key=len, reverse=True)
+
+        body = doc.element.body
+        for p in body.iter(qn("w:p")):
+            self._process_paragraph(p, flat, ordered_keys, checkpoint_image_path, doc)
+
+    def _process_paragraph(self, p, flat, ordered_keys, checkpoint_image_path, doc):
+        t_elems = p.findall(".//" + qn("w:t"))
+        if not t_elems:
+            return
+
+        original = "".join(t.text or "" for t in t_elems)
+        if not original:
+            return
+
+        new_text = original
+
+        # 1) Inspection photo: drop the tag and insert the image in this box.
+        if "checkpoint_img" in new_text:
+            new_text = new_text.replace("checkpoint_img", "")
+            if checkpoint_image_path and os.path.exists(checkpoint_image_path):
+                try:
+                    self._insert_image(p, checkpoint_image_path, doc)
+                except Exception as img_error:  # pragma: no cover - defensive
+                    logger.warning(f"Failed to place image: {img_error!r}")
+
+        # 2) Payment stamp.
+        if "paid_stamp" in new_text:
+            status = "پرداخت شد" if flat.get("is_payed") in [1, "1", True] else "پرداخت نشد"
+            new_text = new_text.replace("paid_stamp", status)
+
+        # 3) All remaining field placeholders.
+        for key in ordered_keys:
+            if key in new_text:
+                new_text = new_text.replace(key, str(flat[key]))
+
+        if new_text != original:
+            self._set_paragraph_text(t_elems, new_text)
+
+    @staticmethod
+    def _set_paragraph_text(t_elems, new_text):
+        """Write the coalesced text back into the first run and clear the rest,
+        preserving whitespace."""
+        first = t_elems[0]
+        first.text = new_text
+        first.set(qn("xml:space"), "preserve")
+        for t in t_elems[1:]:
+            t.text = ""
+
+    def _insert_image(self, p, image_path, doc):
+        para = Paragraph(p, doc)
+        run = para.add_run()
+        run.add_picture(image_path, width=Cm(self.CHECKPOINT_IMG_WIDTH_CM))
+
+    # ------------------------------------------------------------------ #
+    # Data flattening (unchanged public contract)                        #
+    # ------------------------------------------------------------------ #
     def flatten_data(self, data):
         flat = {}
 
@@ -217,7 +215,7 @@ class ContractGenerator:
         flat["description_text"] = data["deal_info"].get("description_text", "")
         flat["deal_date"] = JalaliDate.today().strftime("%Y/%m/%d")
         flat["deal_num"] = data["deal_info"].get("deal_num", "")
-        
+
         is_payed = data["deal_info"].get("is_payed")
         flat["is_payed"] = 1 if is_payed in [1, "1", True] else 0
 

@@ -84,3 +84,39 @@ def sample_contract_data():
             "is_payed": 0
         }
     }
+
+
+@pytest.fixture
+def sample_json_file(sample_contract_data, temp_dir):
+    """نوشتن داده نمونه در یک فایل JSON موقت"""
+    path = os.path.join(temp_dir, "contract.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(sample_contract_data, f, ensure_ascii=False)
+    return path
+
+
+@pytest.fixture
+def sample_checkpoint_image(temp_dir):
+    """ساخت یک فایل PNG معتبر و کوچک برای تصویر کارشناسی (بدون وابستگی خارجی)"""
+    import struct
+    import zlib
+
+    def _png_bytes(width=2, height=2, rgb=(120, 160, 220)):
+        def chunk(tag, data):
+            return (
+                struct.pack(">I", len(data))
+                + tag
+                + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+            )
+
+        sig = b"\x89PNG\r\n\x1a\n"
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+        raw = b"".join(b"\x00" + bytes(rgb) * width for _ in range(height))
+        idat = zlib.compress(raw)
+        return sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+
+    path = os.path.join(temp_dir, "checkpoint.png")
+    with open(path, "wb") as f:
+        f.write(_png_bytes())
+    return path

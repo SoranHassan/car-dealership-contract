@@ -33,7 +33,6 @@ class TestContractGenerator:
         for field in required:
             assert field in flat
     
-    @pytest.mark.skip(reason="Requires Microsoft Word installed")
     def test_generate_contract(self, temp_dir, sample_json_file, sample_checkpoint_image):
         from word.generator import ContractGenerator
         
