@@ -124,7 +124,7 @@ def main():
     
     try:
         from ui.app import resource_path
-        icon_path = resource_path("icon.jpg")
+        icon_path = resource_path("icon.ico")
         if os.path.exists(icon_path):
             app.setWindowIcon(QIcon(icon_path))
     except Exception as e:
