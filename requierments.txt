@@ -1,31 +1,31 @@
 # requirements.txt
 # AutoGarideh - Vehicle Contract Generator
+#
+# Install with:  pip install -r requierments.txt
+# Works on Linux, Windows and macOS (no Windows-only dependencies).
 
-# GUI Framework
+# ----------------------------------------------------------------------
+# Core runtime
+# ----------------------------------------------------------------------
+
+# GUI framework
 PySide6>=6.5.0
 
-# Word Document Generation (Windows only)
-pywin32>=306
+# Word (.docx) generation — cross-platform, replaces the old Windows-only
+# pywin32 / MS Word COM automation.
+python-docx>=1.1.0
 
-# Persian Date Utilities
+# Persian (Jalali) date utilities
 persiantools>=4.0.0
 
-# HTTP Requests for Sync Service
+# HTTP client used by the cloud sync service
 requests>=2.31.0
 
-# Database (built-in - no installation needed)
-# sqlite3 is included with Python
+# Note: sqlite3 is part of the Python standard library — no install needed.
 
-# Additional Utilities
-python-dateutil>=2.8.2
-
-# Optional: For better performance
-# apscheduler>=3.10.0
-
-# Optional: For PDF export (if needed later)
-# reportlab>=4.0.0
-
-# Test
-pytest
-pytest-qt 
-pytest-cov
+# ----------------------------------------------------------------------
+# Development / tests (optional)
+# ----------------------------------------------------------------------
+pytest>=7.0
+pytest-qt>=4.2
+pytest-cov>=4.0
