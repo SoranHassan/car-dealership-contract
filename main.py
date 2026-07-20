@@ -121,7 +121,16 @@ def main():
     app.setApplicationName("AutoGarideh")
     app.setOrganizationName("AutoGarideh")
     app.setApplicationVersion("2.1.0")
-    
+
+    # بارگذاری فونت‌های همراه برنامه (بدون نیاز به نصب روی سیستم مشتری)
+    # و اعمال پالت روشن تا متن ورودی‌ها در تم دارک سفید/نامرئی نشود.
+    try:
+        from ui.appearance import load_bundled_fonts, apply_light_palette
+        load_bundled_fonts()
+        apply_light_palette(app)
+    except Exception as e:
+        logger.warning(f"Could not apply appearance settings: {e}")
+
     try:
         from ui.app import resource_path
         icon_path = resource_path("icon.ico")

@@ -121,8 +121,23 @@ class ContractGenerator:
         for p in body.iter(qn("w:p")):
             self._process_paragraph(p, flat, ordered_keys, checkpoint_image_path, doc)
 
+    @staticmethod
+    def _own_text_elems(p):
+        """Return the <w:t> elements that belong directly to this paragraph's
+        own runs (and hyperlink runs), excluding any inside nested text-box
+        paragraphs. Using descendant './/w:t' would double-count text boxes,
+        because their inner <w:p> is visited separately."""
+        elems = []
+        for child in p:
+            if child.tag == qn("w:r"):
+                elems.extend(child.findall(qn("w:t")))
+            elif child.tag == qn("w:hyperlink"):
+                for r in child.findall(qn("w:r")):
+                    elems.extend(r.findall(qn("w:t")))
+        return elems
+
     def _process_paragraph(self, p, flat, ordered_keys, checkpoint_image_path, doc):
-        t_elems = p.findall(".//" + qn("w:t"))
+        t_elems = self._own_text_elems(p)
         if not t_elems:
             return
 
