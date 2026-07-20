@@ -123,6 +123,12 @@ class SearchApp(QWidget):
         btn_layout.addStretch()
         btn_layout.addWidget(self.loading_label)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.open_btn)
+        btn_layout.addWidget(self.delete_btn)
+        btn_layout.addWidget(self.save_changes_btn)
+        btn_layout.addStretch()
+
         layout = QVBoxLayout(self)
         layout.addLayout(top_layout)
         layout.addWidget(self.table)
@@ -136,6 +142,7 @@ class SearchApp(QWidget):
         self.dealnum_edit.returnPressed.connect(self.search_async)
         self.open_btn.clicked.connect(self.open_selected)
         self.delete_btn.clicked.connect(self.delete_selected)
+        self.save_changes_btn.clicked.connect(self.save_changes)
 
         # تاخیر در جستجو هنگام تایپ (Debounce)
         self.search_timer = QTimer()
@@ -261,6 +268,124 @@ class SearchApp(QWidget):
             combo.setCurrentIndex(old_value)
             QMessageBox.warning(self, "خطا", "تغییر وضعیت پرداخت انجام نشد.")
 
+            if is_payed is None:
+                combo.setCurrentIndex(1)
+                combo.setEnabled(False)
+                color = QColor("#b6ffb3")
+            else:
+                combo.setCurrentIndex(1 if is_payed == 1 else 0)
+                combo.currentIndexChanged.connect(
+                    lambda _, cn=contract_number: self.on_pay_changed(cn)
+                )
+                color = QColor("#b6ffb3") if is_payed == 1 else QColor("#ffb3b3")
+
+            self.table.setCellWidget(row_idx, 0, combo)
+
+            # شماره قرارداد
+            cn_item = QTableWidgetItem(str(contract_number))
+            cn_item.setData(Qt.UserRole, file_path)
+            cn_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row_idx, 1, cn_item)
+
+            # فروشنده
+            seller_item = QTableWidgetItem(seller_name)
+            seller_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row_idx, 2, seller_item)
+
+            # خریدار
+            buyer_item = QTableWidgetItem(buyer_name)
+            buyer_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row_idx, 3, buyer_item)
+
+            # رنگ‌بندی
+            for col in range(1, 4):
+                item = self.table.item(row_idx, col)
+                if item:
+                    item.setBackground(color)
+
+    # ---------------- تغییر وضعیت پرداخت ----------------
+    def on_pay_changed(self, contract_number):
+        rows = self.table.rowCount()
+        for row in range(rows):
+            cn_item = self.table.item(row, 1)
+            if cn_item and cn_item.text() == str(contract_number):
+                combo = self.table.cellWidget(row, 0)
+                new_value = 1 if combo.currentIndex() == 1 else 0
+
+                # پاک کردن مقدار قبلی
+                if contract_number in self.changed_rows:
+                    del self.changed_rows[contract_number]
+
+                # ثبت مقدار جدید
+                self.changed_rows[contract_number] = new_value
+
+                # رنگ‌بندی
+                color = QColor("#b6ffb3") if new_value == 1 else QColor("#ffb3b3")
+                for col in range(1, 4):
+                    item = self.table.item(row, col)
+                    if item:
+                        item.setBackground(color)
+                break
+
+    # ---------------- ذخیره تغییرات ----------------
+    def save_changes(self):
+        if not self.changed_rows:
+            QMessageBox.information(self, "تغییری نیست", "هیچ وضعیتی تغییر داده نشده است.")
+            return
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        for contract_number, new_is_payed in self.changed_rows.items():
+            cur.execute(
+                "UPDATE contracts SET is_payed=? WHERE contract_number=?",
+                (new_is_payed, contract_number)
+            )
+
+            # خواندن داده‌ها برای ساخت Word
+            cur.execute("""
+                SELECT seller_json, buyer_json, car_json, deal_json,
+                       file_path, checkpoint_image
+                FROM contracts
+                WHERE contract_number=?
+            """, (contract_number,))
+            row = cur.fetchone()
+            if not row:
+                continue
+
+            seller_json, buyer_json, car_json, deal_json, file_path, checkpoint_image = row
+
+            seller = json.loads(seller_json)
+            buyer = json.loads(buyer_json)
+            car = json.loads(car_json)
+            deal = json.loads(deal_json)
+
+            deal["is_payed"] = new_is_payed
+
+            data = {
+                "seller": seller,
+                "buyer": buyer,
+                "car_deal": car,
+                "deal_info": deal
+            }
+
+            # ذخیره JSON موقت
+            temp_json = os.path.join(BASE_DIR, "temp_update.json")
+            with open(temp_json, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+
+            # ساخت Word
+            generator = ContractGenerator()
+            output_dir = os.path.dirname(file_path)
+            generator.generate(temp_json, checkpoint_image, output_dir)
+
+        conn.commit()
+        conn.close()
+
+        self.changed_rows.clear()
+        QMessageBox.information(self, "ذخیره شد", "تغییرات وضعیت پرداخت ذخیره و قراردادها دوباره ساخته شدند.")
+
+    # ---------------- باز کردن ----------------
     def open_selected(self):
         row = self.table.currentRow()
         if row < 0:
@@ -277,6 +402,7 @@ class SearchApp(QWidget):
         else:
             QMessageBox.warning(self, "خطا", "فایل قرارداد یافت نشد.")
 
+    # ---------------- حذف ----------------
     def delete_selected(self):
         row = self.table.currentRow()
         if row < 0:
@@ -317,6 +443,7 @@ class SearchApp(QWidget):
         self.db._clear_cache()
         # بارگذاری مجدد همه قراردادها
         self.show_all_contracts()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

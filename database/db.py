@@ -128,6 +128,7 @@ class DatabaseManager:
 
             conn.commit()
 
+    # ---------------- Contract Number ----------------
     def get_next_contract_number(self):
         with self.get_connection() as conn:
             cur = conn.cursor()
@@ -139,6 +140,7 @@ class DatabaseManager:
             conn.commit()
             return next_num
 
+    # ---------------- Save Contract ----------------
     def save_contract(self, buyer_id, seller_id, file_path, date_shamsi,
                     seller_json, buyer_json, car_json, deal_json,
                     checkpoint_image, is_payed, price_info, description_text):
@@ -264,6 +266,7 @@ class DatabaseManager:
             """, (key, value))
             conn.commit()
 
+    # ---------------- Logs ----------------
     def log(self, action, message, data_json=""):
         with self.get_connection() as conn:
             cur = conn.cursor()
@@ -273,8 +276,10 @@ class DatabaseManager:
             """, (action, message, data_json, datetime.now().isoformat()))
             conn.commit()
 
+    # ---------------- Save Path ----------------
     def get_save_path(self):
         return self.get_setting('save_path')
+
 
     def set_save_path(self, path):
         self.set_setting('save_path', path)
