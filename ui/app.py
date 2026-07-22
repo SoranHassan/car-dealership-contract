@@ -6,7 +6,7 @@ import os
 import time
 from datetime import datetime
 from PySide6.QtGui import QPixmap, QTextCursor
-from PySide6.QtCore import QTimer, Qt, QTime, QThread, Signal
+from PySide6.QtCore import QTimer, Qt, QTime, QThread, Signal, QRect
 from PySide6.QtWidgets import QMessageBox, QFileDialog, QLabel, QVBoxLayout, QMainWindow, QLineEdit, QApplication, QPushButton
 from ui.ui import Ui_MainWindow
 from database.db import DatabaseManager
@@ -195,6 +195,55 @@ class App(QMainWindow):
             self.admin_btn.clicked.connect(self.on_admin_clicked)
             # اضافه کردن کنار update_db
             self.ui.header_frame.layout().addWidget(self.admin_btn)
+
+        # دکمه پر کردن خودکار با داده تستی (فقط برای تست)
+        self.fill_test_btn = QPushButton("🧪 پر کردن تستی", self.ui.header_frame)
+        self.fill_test_btn.setGeometry(QRect(102, 5, 110, 26))
+        self.fill_test_btn.setStyleSheet("background-color: #E67E22; border-radius: 5px; color: white;")
+        self.fill_test_btn.setToolTip("پر کردن تمام فیلدها با داده نمونه (برای تست)")
+        self.fill_test_btn.clicked.connect(self.fill_test_data)
+        self.fill_test_btn.show()
+        self.fill_test_btn.raise_()
+
+    def fill_test_data(self):
+        """پر کردن تمام فیلدهای فرم با داده نمونه برای تست"""
+        text_fields = {
+            "seller_name": "علی", "seller_lname": "محمدی", "seller_father": "حسین",
+            "seller_birth": "1365/01/01", "seller_ncode": "1234567890",
+            "seller_shcode": "12345", "seller_from": "تهران",
+            "seller_phone": "09123456789", "seller_adress": "تهران، خیابان آزادی",
+
+            "buyer_name": "رضا", "buyer_lname": "کریمی", "buyer_father": "احمد",
+            "buyer_birth": "1370/02/02", "buyer_ncode": "0987654321",
+            "buyer_shcode": "54321", "buyer_from": "شیراز",
+            "buyer_phone": "09234567890", "buyer_adress": "شیراز، خیابان سعدی",
+
+            "car_type": "پراید", "car_color": "سفید", "car_system": "دنده‌ای",
+            "car_model": "1398", "car_body_id": "ABC123456789",
+            "car_motor_id": "XYZ987654321", "car_kilometer": "120000",
+            "car_info": "بدون مشکل",
+
+            "pelak_two": "12", "pelak_three": "456", "pelak_iran": "78",
+
+            "day_respite": "7", "price_rial": "500,000,000",
+            "price_toman": "50,000,000",
+        }
+        for name, value in text_fields.items():
+            widget = getattr(self.ui, name, None)
+            if widget is not None:
+                widget.setText(value)
+
+        if hasattr(self.ui, "description_text"):
+            self.ui.description_text.setPlainText("توضیحات تستی برای بررسی فرم و خروجی قرارداد.")
+
+        if hasattr(self.ui, "pelak_alpha"):
+            self.ui.pelak_alpha.setCurrentIndex(0)
+        if hasattr(self.ui, "price_info"):
+            self.ui.price_info.setCurrentIndex(1)  # "تمام نقدی"
+        if hasattr(self.ui, "is_payed"):
+            self.ui.is_payed.setCurrentIndex(1)
+
+        logging.info("Test data filled into the form")
 
     def on_admin_clicked(self):
         """باز کردن پنل مدیریت"""
