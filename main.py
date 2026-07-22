@@ -176,7 +176,31 @@ def main():
         sys.exit(1)
     
     logger.info("License check passed")
-    
+
+    # 6.۱ بررسی اشتراک از راه دور (در صورت فعال بودن سرور لایسنس)
+    try:
+        from database.db import DatabaseManager as _LicenseDBM
+        from ui.license_client import LicenseClient
+        _license_db = _LicenseDBM()
+        license_client = LicenseClient(_license_db)
+
+        if license_client.is_enabled():
+            valid, message = license_client.check_license()
+            if not valid:
+                from ui.subscription_dialog import SubscriptionLoginDialog
+                dialog = SubscriptionLoginDialog(license_client)
+                if dialog.exec() == SubscriptionLoginDialog.Accepted:
+                    valid, message = license_client.check_license()
+
+            if not valid:
+                logger.warning(f"Subscription check failed: {message}")
+                splash.close()
+                QMessageBox.critical(None, "خطای اشتراک", message or "اشتراک نامعتبر است.")
+                sys.exit(1)
+            logger.info("Subscription check passed")
+    except Exception as e:
+        logger.warning(f"Subscription check skipped due to error: {e}")
+
     # 7. راه‌اندازی سرویس همگام‌سازی
     logger.info("Initializing sync service...")
     sync_service = SyncService()
@@ -193,6 +217,22 @@ def main():
             logger.info(f"Sync service started with root: {save_path}")
     except Exception as e:
         logger.warning(f"Could not start sync service: {e}")
+
+    # اگر بک‌آپ خودکار برای این مشتری در پنل ادمین فعال شده، در پس‌زمینه ارسال کن
+    try:
+        if "license_client" in dir() and license_client.is_enabled() and license_client.should_backup():
+            import threading
+
+            def _do_backup():
+                try:
+                    ok, msg = license_client.upload_backup(db.db_name, save_path)
+                    logger.info(f"Backup upload: {ok} - {msg}")
+                except Exception as backup_err:
+                    logger.warning(f"Backup upload failed: {backup_err}")
+
+            threading.Thread(target=_do_backup, daemon=True).start()
+    except Exception as e:
+        logger.warning(f"Could not start backup upload: {e}")
     
     # 8. ایجاد و نمایش پنجره اصلی
     logger.info("Creating main window...")

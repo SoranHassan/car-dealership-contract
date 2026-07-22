@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar">
+  <h1>🎛️ مدیریت مشتری‌های AutoGarideh</h1>
+  <a href="/admin/logout" class="btn secondary">خروج</a>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">➕ افزودن مشتری جدید</h3>
+  <form method="post" action="/admin/customers/new" class="row">
+    <input name="username" placeholder="نام کاربری" required>
+    <input name="password" type="password" placeholder="رمز عبور" required>
+    <input name="display_name" placeholder="نام نمایشی (اختیاری)">
+    <input name="days" type="number" value="30" min="1" style="width:90px;" title="تعداد روز اشتراک">
+    <button type="submit">ایجاد حساب</button>
+  </form>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>نام کاربری</th>
+      <th>نام نمایشی</th>
+      <th>وضعیت</th>
+      <th>انقضای اشتراک</th>
+      <th>بک‌آپ خودکار</th>
+      <th>عملیات</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.c.username }}</td>
+      <td>{{ row.c.display_name }}</td>
+      <td>
+        {% if row.valid %}
+          <span class="badge ok">فعال</span>
+        {% elif not row.c.is_active %}
+          <span class="badge bad">غیرفعال (دستی)</span>
+        {% else %}
+          <span class="badge bad">منقضی</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if row.c.subscription_expires_at %}
+          {{ row.c.subscription_expires_at.strftime('%Y-%m-%d') }}
+          {% if row.days_left is not none %}
+            <span class="badge {% if row.days_left < 0 %}bad{% elif row.days_left < 5 %}warn{% else %}ok{% endif %}">
+              {% if row.days_left >= 0 %}{{ row.days_left }} روز مانده{% else %}{{ -row.days_left }} روز پیش منقضی شد{% endif %}
+            </span>
+          {% endif %}
+        {% else %}—{% endif %}
+      </td>
+      <td>
+        <form method="post" action="/admin/customers/{{ row.c.id }}/toggle-backup" class="inline">
+          <button type="submit" class="{% if row.c.auto_backup_enabled %}{% else %}secondary{% endif %}">
+            {% if row.c.auto_backup_enabled %}✅ فعال{% else %}⭕ غیرفعال{% endif %}
+          </button>
+        </form>
+      </td>
+      <td>
+        <div class="row">
+          <form method="post" action="/admin/customers/{{ row.c.id }}/extend" class="inline row">
+            <input type="number" name="days" value="30" min="1" style="width:70px;">
+            <button type="submit">➕ تمدید</button>
+          </form>
+          <form method="post" action="/admin/customers/{{ row.c.id }}/toggle-active" class="inline">
+            <button type="submit" class="secondary">{% if row.c.is_active %}⏸️ غیرفعال کن{% else %}▶️ فعال کن{% endif %}</button>
+          </form>
+          <a href="/admin/customers/{{ row.c.id }}/backups" class="btn secondary">💾 بک‌آپ‌ها</a>
+          <form method="post" action="/admin/customers/{{ row.c.id }}/delete" class="inline"
+                onsubmit="return confirm('حذف این مشتری و همه بک‌آپ‌هایش؟');">
+            <button type="submit" class="danger">🗑️ حذف</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center; color:#8b949e;">هنوز مشتری‌ای ثبت نشده است</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

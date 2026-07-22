@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+bcrypt>=4.0
+python-multipart>=0.0.9
+jinja2>=3.1
+
+# Only needed if you switch DATABASE_URL to a PostgreSQL connection string
+# (e.g. the managed Postgres Railway/Render can provision for you).
+# psycopg2-binary>=2.9

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar">
+  <h1>💾 بک‌آپ‌های {{ customer.display_name }} ({{ customer.username }})</h1>
+  <a href="/admin" class="btn secondary">بازگشت</a>
+</div>
+
+<table>
+  <thead>
+    <tr><th>تاریخ</th><th>حجم</th><th>دانلود</th></tr>
+  </thead>
+  <tbody>
+    {% for b in backups %}
+    <tr>
+      <td>{{ b.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ "%.1f"|format(b.size_bytes / 1048576) }} MB</td>
+      <td><a href="/admin/backups/{{ b.id }}/download" class="btn">⬇️ دانلود برای بازیابی</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" style="text-align:center; color:#8b949e;">هنوز بک‌آپی دریافت نشده است</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

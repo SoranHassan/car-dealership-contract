@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}پنل مدیریت اشتراک AutoGarideh{% endblock %}</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Tahoma, "Segoe UI", sans-serif;
+    background: #0d1117; color: #e6edf3;
+    margin: 0; padding: 24px;
+  }
+  a { color: #58a6ff; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { color: #ff7b72; font-size: 22px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; background: #161b22; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid #30363d; font-size: 13px; }
+  th { background: #21262d; color: #ff7b72; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+  .badge.ok { background: #23863633; color: #3fb950; }
+  .badge.bad { background: #da363333; color: #f85149; }
+  .badge.warn { background: #9e6a0333; color: #d29922; }
+  button, .btn {
+    background: #238636; color: white; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  button:hover, .btn:hover { background: #2ea043; }
+  .btn.danger { background: #da3633; } .btn.danger:hover { background: #f85149; }
+  .btn.secondary { background: #30363d; } .btn.secondary:hover { background: #484f58; }
+  form.inline { display: inline; }
+  input, select {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+    color: #e6edf3; padding: 8px 10px; font-size: 13px; font-family: inherit;
+  }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .error { color: #f85149; margin-top: 8px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+{% block content %}{% endblock %}
+</div>
+</body>
+</html>
