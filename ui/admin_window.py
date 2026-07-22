@@ -31,7 +31,7 @@ class AdminWindow(QWidget):
         self.contracts_dir = None
         self.last_contract_count = 0
 
-        self._apply_dark_theme()
+        self._apply_theme()
         self._setup_ui()
         self._load_data()
         self._setup_auto_refresh()
@@ -44,52 +44,53 @@ class AdminWindow(QWidget):
         self.animation.setEasingCurve(QEasingCurve.OutCubic)
         self.animation.start()
 
-    def _apply_dark_theme(self):
-        """تم دارک حرفه‌ای و بهینه"""
+    def _apply_theme(self):
+        """تم روشن، ساده و حرفه‌ای"""
+        self.setLayoutDirection(Qt.RightToLeft)
         self.setStyleSheet("""
-            /* استایل اصلی - تم حرفه‌ای مدیریتی */
+            /* استایل اصلی - تم روشن مدیریتی */
             QWidget {
-                background-color: #0d1117;
-                color: #e6edf3;
+                background-color: #f5f6f8;
+                color: #1f2328;
                 font-family: 'Segoe UI', 'Inter', 'Arial';
                 font-size: 12px;
             }
-            
+            QLabel { background: transparent; }
+
             /* کارت هدر */
             QFrame#headerCard {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #161b22, stop:1 #0d1117);
+                background: #ffffff;
                 border-radius: 12px;
                 min-height: 65px;
-                border: 1px solid #30363d;
+                border: 1px solid #e1e4e8;
             }
             #headerTitle {
                 font-size: 18px;
                 font-weight: bold;
-                color: #ff7b72;
+                color: #1C4D8D;
             }
             #headerSub {
                 font-size: 11px;
-                color: #8b949e;
+                color: #6a737d;
             }
             #dbStatus {
-                background-color: #21262d;
+                background-color: #e6f4ea;
                 padding: 4px 12px;
                 border-radius: 20px;
                 font-size: 11px;
-                color: #3fb950;
+                color: #1a7f37;
             }
-            
+
             /* نوار ابزار */
             QFrame#toolbarCard, QFrame#filtersCard, QFrame#searchCard, QFrame#footerCard {
-                background-color: #161b22;
+                background-color: #ffffff;
                 border-radius: 10px;
-                border: 1px solid #30363d;
+                border: 1px solid #e1e4e8;
             }
-            
+
             /* دکمه‌ها */
             QPushButton {
-                background-color: #238636;
+                background-color: #1C4D8D;
                 color: white;
                 border: none;
                 border-radius: 6px;
@@ -98,41 +99,41 @@ class AdminWindow(QWidget):
                 font-size: 11px;
             }
             QPushButton:hover {
-                background-color: #2ea043;
+                background-color: #163d6f;
             }
             QPushButton#dangerBtn {
-                background-color: #da3633;
+                background-color: #d1332f;
             }
             QPushButton#dangerBtn:hover {
-                background-color: #f85149;
+                background-color: #b8241f;
             }
-            
+
             /* کامبوباکس و ورودی */
             QComboBox, QDateEdit {
-                background-color: #0d1117;
-                border: 1px solid #30363d;
+                background-color: #ffffff;
+                border: 1px solid #d0d7de;
                 border-radius: 6px;
                 padding: 5px 10px;
-                color: #e6edf3;
+                color: #1f2328;
                 min-width: 100px;
             }
             QLineEdit {
-                background-color: #0d1117;
-                border: 1px solid #30363d;
+                background-color: #ffffff;
+                border: 1px solid #d0d7de;
                 border-radius: 8px;
                 padding: 8px 12px;
-                color: #e6edf3;
+                color: #1f2328;
                 font-size: 12px;
             }
             QLineEdit:focus {
-                border: 1px solid #ff7b72;
+                border: 1px solid #1C4D8D;
             }
-            
+
             /* کارت آمار */
             QFrame#statCard {
-                background-color: #161b22;
+                background-color: #ffffff;
                 border-radius: 12px;
-                border: 1px solid #30363d;
+                border: 1px solid #e1e4e8;
                 min-height: 80px;
             }
             #statIcon {
@@ -141,44 +142,44 @@ class AdminWindow(QWidget):
             #statValue {
                 font-size: 22px;
                 font-weight: bold;
-                color: #ff7b72;
+                color: #1C4D8D;
             }
             #statLabel {
                 font-size: 11px;
-                color: #8b949e;
+                color: #6a737d;
             }
-            
+
             /* تب‌ها */
             QTabWidget::pane {
-                background-color: #161b22;
+                background-color: #ffffff;
                 border-radius: 10px;
-                border: 1px solid #30363d;
+                border: 1px solid #e1e4e8;
             }
             QTabBar::tab {
-                background-color: #21262d;
-                color: #8b949e;
+                background-color: #eef0f3;
+                color: #6a737d;
                 padding: 7px 20px;
-                margin-right: 4px;
+                margin-left: 4px;
                 border-top-left-radius: 8px;
                 border-top-right-radius: 8px;
                 font-weight: bold;
                 font-size: 12px;
             }
             QTabBar::tab:selected {
-                background-color: #ff7b72;
-                color: #0d1117;
+                background-color: #1C4D8D;
+                color: #ffffff;
             }
             QTabBar::tab:hover:!selected {
-                background-color: #30363d;
-                color: #e6edf3;
+                background-color: #dde3ea;
+                color: #1f2328;
             }
-            
+
             /* درخت و جدول */
             QTreeView, QTableView {
-                background-color: #0d1117;
-                alternate-background-color: #161b22;
-                selection-background-color: #1f6feb;
-                selection-color: white;
+                background-color: #ffffff;
+                alternate-background-color: #f5f6f8;
+                selection-background-color: #cfe0f5;
+                selection-color: #1f2328;
                 border: none;
                 font-size: 12px;
                 outline: 0;
@@ -190,49 +191,50 @@ class AdminWindow(QWidget):
                 background-color: transparent;
             }
             QHeaderView::section {
-                background-color: #21262d;
-                color: #ff7b72;
+                background-color: #eef0f3;
+                color: #1C4D8D;
                 padding: 8px;
                 font-weight: bold;
                 border: none;
                 font-size: 11px;
             }
-            
+
             /* هشدار */
             #warningLabel {
-                background-color: #da3633;
+                background-color: #d1332f;
+                color: white;
                 padding: 4px 12px;
                 border-radius: 20px;
                 font-size: 11px;
                 font-weight: bold;
             }
-            
+
             /* اسکرول بار */
             QScrollBar:vertical {
-                background-color: #0d1117;
+                background-color: #f5f6f8;
                 width: 8px;
                 border-radius: 4px;
             }
             QScrollBar::handle:vertical {
-                background-color: #30363d;
+                background-color: #d0d7de;
                 border-radius: 4px;
                 min-height: 50px;
             }
             QScrollBar::handle:vertical:hover {
-                background-color: #ff7b72;
+                background-color: #1C4D8D;
             }
-            
+
             /* فوتر */
             #footerLabel {
-                color: #8b949e;
+                color: #6a737d;
                 font-size: 11px;
             }
             #recordCount {
-                background-color: #21262d;
+                background-color: #eef0f3;
                 padding: 3px 12px;
                 border-radius: 20px;
                 font-size: 11px;
-                color: #ff7b72;
+                color: #1C4D8D;
                 font-weight: bold;
             }
         """)
@@ -441,10 +443,10 @@ class AdminWindow(QWidget):
         form = QFrame()
         form.setObjectName("settingsForm")
         form.setStyleSheet("""
-            #settingsForm { background-color: #21262d; border-radius: 8px; padding: 10px; }
-            QLabel { color: #e6edf3; font-size: 12px; }
+            #settingsForm { background-color: #ffffff; border-radius: 8px; padding: 10px; border: 1px solid #e1e4e8; }
+            QLabel { color: #1f2328; font-size: 12px; }
             QLineEdit, QComboBox, QSpinBox {
-                background-color: #161b22; color: #e6edf3; border: 1px solid #30363d;
+                background-color: #ffffff; color: #1f2328; border: 1px solid #d0d7de;
                 border-radius: 4px; padding: 6px; font-size: 12px;
             }
         """)
@@ -455,6 +457,7 @@ class AdminWindow(QWidget):
             row = QHBoxLayout()
             lbl = QLabel(label_text)
             lbl.setFixedWidth(150)
+            lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             row.addWidget(lbl)
             row.addWidget(widget, 1)
             grid.addLayout(row)

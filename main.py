@@ -121,6 +121,9 @@ def main():
     app.setApplicationName("AutoGarideh")
     app.setOrganizationName("AutoGarideh")
     app.setApplicationVersion("2.1.0")
+    # توجه: راست‌چین‌شدنِ پنل مدیریت (AdminWindow) به‌صورت مجزا و فقط روی همان
+    # پنجره تنظیم می‌شود (نه سراسری روی کل برنامه)، چون RTL سراسری باعث به‌هم
+    # ریختن نمایش فیلدهای QDateEdit/QTimeEdit در فرم اصلی می‌شد.
 
     # بارگذاری فونت‌های همراه برنامه (بدون نیاز به نصب روی سیستم مشتری)
     # و اعمال پالت روشن تا متن ورودی‌ها در تم دارک سفید/نامرئی نشود.
