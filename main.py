@@ -125,8 +125,9 @@ def main():
     # بارگذاری فونت‌های همراه برنامه (بدون نیاز به نصب روی سیستم مشتری)
     # و اعمال پالت روشن تا متن ورودی‌ها در تم دارک سفید/نامرئی نشود.
     try:
-        from ui.appearance import load_bundled_fonts, apply_light_palette
-        load_bundled_fonts()
+        from ui.appearance import load_bundled_fonts, install_fonts_system_wide, apply_light_palette
+        load_bundled_fonts()          # for our own Qt UI, this run
+        install_fonts_system_wide()   # for Word/LibreOffice opening generated .docx files
         apply_light_palette(app)
     except Exception as e:
         logger.warning(f"Could not apply appearance settings: {e}")

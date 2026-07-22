@@ -22,7 +22,7 @@ import sys
 from persiantools.jdatetime import JalaliDate
 
 from docx import Document
-from docx.shared import Cm
+from docx.shared import Cm, Emu
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 
@@ -40,7 +40,9 @@ class ContractGeneratorError(Exception):
 
 
 class ContractGenerator:
-    # Width used for the inspection photo inserted into its text box.
+    # Fallback size for the inspection photo, only used if the enclosing
+    # text box's real dimensions can't be read from the template (should
+    # not normally happen — see _box_extent_emu).
     CHECKPOINT_IMG_WIDTH_CM = 6.5
 
     def __init__(self):
@@ -79,6 +81,7 @@ class ContractGenerator:
             temp_output = os.path.join(temp_dir, "temp_output.docx")
 
             doc = Document(os.path.abspath(self.word_template))
+            self._checkpoint_image_inserted = False
             self._fill_document(doc, flat, checkpoint_image_path)
             doc.save(temp_output)
 
@@ -148,11 +151,22 @@ class ContractGenerator:
         new_text = original
 
         # 1) Inspection photo: drop the tag and insert the image in this box.
+        # The template stores each shape twice for compatibility (a modern
+        # DrawingML "Choice" and a legacy VML "Fallback" of the same visual
+        # shape via mc:AlternateContent) — both contain the placeholder text,
+        # but only the Choice (processed first, in document order) is ever
+        # actually rendered by Word/LibreOffice, so the picture is inserted
+        # only once, into that occurrence.
         if "checkpoint_img" in new_text:
             new_text = new_text.replace("checkpoint_img", "")
-            if checkpoint_image_path and os.path.exists(checkpoint_image_path):
+            if (
+                not self._checkpoint_image_inserted
+                and checkpoint_image_path
+                and os.path.exists(checkpoint_image_path)
+            ):
                 try:
                     self._insert_image(p, checkpoint_image_path, doc)
+                    self._checkpoint_image_inserted = True
                 except Exception as img_error:  # pragma: no cover - defensive
                     logger.warning(f"Failed to place image: {img_error!r}")
 
@@ -179,10 +193,38 @@ class ContractGenerator:
         for t in t_elems[1:]:
             t.text = ""
 
+    def _box_extent_emu(self, p):
+        """Walk up from a paragraph nested inside a text box to the enclosing
+        <wp:inline>/<wp:anchor> and read its <wp:extent> — the real,
+        designed size (in EMU) of the box the paragraph lives in. Returns
+        (cx, cy) or None if the paragraph isn't inside a drawing (shouldn't
+        happen for our template, but we don't want to ever raise here)."""
+        node = p
+        while node is not None:
+            if node.tag in (qn("wp:inline"), qn("wp:anchor")):
+                extent = node.find(qn("wp:extent"))
+                if extent is not None:
+                    cx = extent.get("cx")
+                    cy = extent.get("cy")
+                    if cx and cy:
+                        return int(cx), int(cy)
+                return None
+            node = node.getparent()
+        return None
+
     def _insert_image(self, p, image_path, doc):
         para = Paragraph(p, doc)
         run = para.add_run()
-        run.add_picture(image_path, width=Cm(self.CHECKPOINT_IMG_WIDTH_CM))
+        extent = self._box_extent_emu(p)
+        if extent:
+            cx, cy = extent
+            run.add_picture(image_path, width=Emu(cx), height=Emu(cy))
+        else:
+            logger.warning(
+                "checkpoint_img box extent not found in template; "
+                "falling back to a fixed width"
+            )
+            run.add_picture(image_path, width=Cm(self.CHECKPOINT_IMG_WIDTH_CM))
 
     # ------------------------------------------------------------------ #
     # Data flattening (unchanged public contract)                        #
