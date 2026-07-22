@@ -263,6 +263,10 @@ class App(QMainWindow):
 
     def setup_banner_and_logo(self):
         """تنظیم بنر و لوگو"""
+        # مسیرهای تنظیم‌شده در تب تنظیمات پنل مدیریت (در صورت وجود)، وگرنه پیش‌فرض برنامه
+        banner_path = self.db.get_setting("banner_path") or resource_path("./assets/images/banner.jpg")
+        logo_path = self.db.get_setting("logo_path") or resource_path("./assets/images/logo.png")
+
         # Banner
         self.frame = self.ui.footer_frame
         self.image_label = QLabel()
@@ -270,8 +274,8 @@ class App(QMainWindow):
         layout = QVBoxLayout(self.frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.image_label)
-        self.load_image(resource_path("./assets/images/banner.jpg"))
-        
+        self.load_image(banner_path)
+
         # Logo
         self.logo_frame = self.ui.logo_frame
         self.logo_label = QLabel()
@@ -279,7 +283,15 @@ class App(QMainWindow):
         layout = QVBoxLayout(self.logo_frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.logo_label)
-        self.load_logo(resource_path("./assets/images/logo.png"))
+        self.load_logo(logo_path)
+
+        # نام مشتری و شماره پشتیبانی (در صورت تنظیم در پنل مدیریت)
+        support_phone = self.db.get_setting("support_phone")
+        if support_phone and hasattr(self.ui, "label_43"):
+            self.ui.label_43.setText(f"پشتیبانی: {support_phone}")
+        customer_name = self.db.get_setting("customer_name")
+        if customer_name:
+            self.setWindowTitle(f"{customer_name} - اتوماسیون ثبت قرارداد خودرو")
 
     def fill_pelak_alpha(self):
         letters = ['ب', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی']

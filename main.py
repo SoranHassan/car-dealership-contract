@@ -132,6 +132,24 @@ def main():
     except Exception as e:
         logger.warning(f"Could not apply appearance settings: {e}")
 
+    # اعمال فونت/سایز انتخاب‌شده در تب تنظیمات پنل مدیریت (در صورت تنظیم)
+    try:
+        from database.db import DatabaseManager as _DBM
+        from PySide6.QtGui import QFont
+        _settings_db = _DBM()
+        family = _settings_db.get_setting("ui_font_family")
+        scale = _settings_db.get_setting("ui_font_scale")
+        if family and family != "(پیش‌فرض)":
+            base_size = 9
+            if scale:
+                try:
+                    base_size = round(9 * int(scale) / 100)
+                except ValueError:
+                    pass
+            app.setFont(QFont(family, base_size))
+    except Exception as e:
+        logger.warning(f"Could not apply admin-configured font settings: {e}")
+
     try:
         from ui.app import resource_path
         icon_path = resource_path("icon.ico")

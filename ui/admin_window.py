@@ -434,12 +434,172 @@ class AdminWindow(QWidget):
 
     def _create_settings_tab(self):
         tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(8, 8, 8, 8)
-        self.table_settings = QTableView()
-        self.table_settings.setAlternatingRowColors(True)
-        layout.addWidget(self.table_settings)
+        outer = QVBoxLayout(tab)
+        outer.setContentsMargins(15, 15, 15, 15)
+        outer.setSpacing(10)
+
+        form = QFrame()
+        form.setObjectName("settingsForm")
+        form.setStyleSheet("""
+            #settingsForm { background-color: #21262d; border-radius: 8px; padding: 10px; }
+            QLabel { color: #e6edf3; font-size: 12px; }
+            QLineEdit, QComboBox, QSpinBox {
+                background-color: #161b22; color: #e6edf3; border: 1px solid #30363d;
+                border-radius: 4px; padding: 6px; font-size: 12px;
+            }
+        """)
+        grid = QVBoxLayout(form)
+        grid.setSpacing(12)
+
+        def field_row(label_text, widget):
+            row = QHBoxLayout()
+            lbl = QLabel(label_text)
+            lbl.setFixedWidth(150)
+            row.addWidget(lbl)
+            row.addWidget(widget, 1)
+            grid.addLayout(row)
+            return row
+
+        self.settings_customer_name = QLineEdit()
+        self.settings_customer_name.setPlaceholderText("مثلاً: نمایشگاه اتومبیل تهران")
+        field_row("نام مشتری/نمایشگاه:", self.settings_customer_name)
+
+        self.settings_support_phone = QLineEdit()
+        self.settings_support_phone.setPlaceholderText("مثلاً: 09123456789")
+        field_row("شماره پشتیبانی:", self.settings_support_phone)
+
+        logo_row = QHBoxLayout()
+        self.settings_logo_path = QLineEdit()
+        self.settings_logo_path.setReadOnly(True)
+        btn_logo = QPushButton("انتخاب فایل...")
+        btn_logo.clicked.connect(lambda: self._pick_image_file(self.settings_logo_path))
+        logo_row.addWidget(self.settings_logo_path, 1)
+        logo_row.addWidget(btn_logo)
+        logo_container = QWidget()
+        logo_container.setLayout(logo_row)
+        logo_container.setMinimumHeight(32)
+        field_row("لوگو:", logo_container)
+
+        banner_row = QHBoxLayout()
+        self.settings_banner_path = QLineEdit()
+        self.settings_banner_path.setReadOnly(True)
+        btn_banner = QPushButton("انتخاب فایل...")
+        btn_banner.clicked.connect(lambda: self._pick_image_file(self.settings_banner_path))
+        banner_row.addWidget(self.settings_banner_path, 1)
+        banner_row.addWidget(btn_banner)
+        banner_container = QWidget()
+        banner_container.setLayout(banner_row)
+        banner_container.setMinimumHeight(32)
+        field_row("بنر پایین صفحه:", banner_container)
+
+        self.settings_font_family = QComboBox()
+        self.settings_font_family.addItems(
+            ["(پیش‌فرض)", "Aria", "Aria Black", "Pelak", "Doran", "IRANSansDN"]
+        )
+        field_row("فونت رابط کاربری:", self.settings_font_family)
+
+        from PySide6.QtWidgets import QSpinBox
+        self.settings_font_scale = QSpinBox()
+        self.settings_font_scale.setRange(70, 150)
+        self.settings_font_scale.setSuffix(" %")
+        self.settings_font_scale.setValue(100)
+        field_row("اندازه فونت:", self.settings_font_scale)
+
+        outer.addWidget(form)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        btn_save_settings = QPushButton("💾 ذخیره تنظیمات")
+        btn_save_settings.setStyleSheet(
+            "background-color: #2ea043; color: white; padding: 8px 20px; "
+            "border-radius: 6px; font-weight: bold;"
+        )
+        btn_save_settings.clicked.connect(self._save_app_settings)
+        btn_row.addWidget(btn_save_settings)
+        outer.addLayout(btn_row)
+
+        note = QLabel("ℹ️ تغییرات پس از بستن و اجرای دوباره برنامه اعمال می‌شوند.")
+        note.setStyleSheet("color: #8b949e; font-size: 11px;")
+        outer.addWidget(note)
+        outer.addStretch()
+
+        self._load_app_settings()
         self.tabs.addTab(tab, "⚙️ تنظیمات")
+
+    def _pick_image_file(self, target_line_edit):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "انتخاب تصویر", "", "Images (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if path:
+            target_line_edit.setText(path)
+
+    def _load_app_settings(self):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cur = conn.cursor()
+            cur.execute("SELECT key, value FROM settings")
+            values = dict(cur.fetchall())
+            conn.close()
+        except Exception:
+            values = {}
+
+        self.settings_customer_name.setText(values.get("customer_name", ""))
+        self.settings_support_phone.setText(values.get("support_phone", ""))
+        self.settings_logo_path.setText(values.get("logo_path", ""))
+        self.settings_banner_path.setText(values.get("banner_path", ""))
+        font_family = values.get("ui_font_family", "(پیش‌فرض)")
+        idx = self.settings_font_family.findText(font_family)
+        self.settings_font_family.setCurrentIndex(idx if idx >= 0 else 0)
+        try:
+            self.settings_font_scale.setValue(int(values.get("ui_font_scale", 100)))
+        except (TypeError, ValueError):
+            self.settings_font_scale.setValue(100)
+
+    def _save_app_settings(self):
+        try:
+            base_dir = os.path.dirname(self.db_path)
+            images_dir = os.path.join(base_dir, "assets", "images")
+            os.makedirs(images_dir, exist_ok=True)
+
+            def store_image(src_path, dest_name):
+                if not src_path or not os.path.exists(src_path):
+                    return None
+                ext = os.path.splitext(src_path)[1] or ".png"
+                dest_path = os.path.join(images_dir, dest_name + ext)
+                shutil.copy2(src_path, dest_path)
+                return dest_path
+
+            logo_dest = store_image(self.settings_logo_path.text().strip(), "logo")
+            banner_dest = store_image(self.settings_banner_path.text().strip(), "banner")
+
+            values = {
+                "customer_name": self.settings_customer_name.text().strip(),
+                "support_phone": self.settings_support_phone.text().strip(),
+                "ui_font_family": self.settings_font_family.currentText(),
+                "ui_font_scale": str(self.settings_font_scale.value()),
+            }
+            if logo_dest:
+                values["logo_path"] = logo_dest
+            if banner_dest:
+                values["banner_path"] = banner_dest
+
+            conn = sqlite3.connect(self.db_path)
+            cur = conn.cursor()
+            for key, value in values.items():
+                cur.execute(
+                    "INSERT INTO settings (key, value) VALUES (?, ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (key, value),
+                )
+            conn.commit()
+            conn.close()
+
+            QMessageBox.information(
+                self, "ذخیره شد",
+                "تنظیمات ذخیره شد. برای اعمال کامل، برنامه را ببندید و دوباره اجرا کنید.",
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "خطا", f"ذخیره تنظیمات ناموفق بود:\n{e}")
 
     def _create_backup_tab(self):
         tab = QWidget()
@@ -539,7 +699,6 @@ class AdminWindow(QWidget):
 
             self._load_tree(conn)
             self._load_logs()
-            self._load_settings(conn)
             self._load_backup_list()
 
             self.last_contract_count = total
@@ -634,16 +793,6 @@ class AdminWindow(QWidget):
                 self.table_logs.resizeColumnsToContents()
         except:
             pass
-
-    def _load_settings(self, conn):
-        sets = conn.execute("SELECT * FROM settings").fetchall()
-        if sets:
-            m = QStandardItemModel()
-            m.setHorizontalHeaderLabels(list(sets[0].keys()))
-            for r in sets:
-                m.appendRow([QStandardItem(str(r[k]) if r[k] else "") for k in r.keys()])
-            self.table_settings.setModel(m)
-            self.table_settings.resizeColumnsToContents()
 
     def _load_backup_list(self):
         os.makedirs(self.backup_dir, exist_ok=True)
